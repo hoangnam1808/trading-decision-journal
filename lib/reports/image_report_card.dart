@@ -368,7 +368,7 @@ class _MetricGrid extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             label: 'Max DD',
-            value: '-${data.maxDrawdown.toStringAsFixed(2)}',
+            value: _drawdownText(data.maxDrawdown),
             subtitle: 'R drawdown',
             icon: Icons.trending_down,
             color: const Color(0xFFEA580C),
@@ -618,6 +618,10 @@ class _Insights extends StatelessWidget {
   }
 }
 
+String _drawdownText(double value) {
+  if (value.abs() < 0.005) return '0.00';
+  return '-${value.toStringAsFixed(2)}';
+}
 class _Footer extends StatelessWidget {
   const _Footer();
 

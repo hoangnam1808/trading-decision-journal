@@ -104,7 +104,7 @@ class PdfReportService {
         _metricBox('Net R', _signed(data.netR)),
         _metricBox('Avg R', _signed(data.avgR)),
         _metricBox('Winrate', '${data.winrate.toStringAsFixed(1)}%'),
-        _metricBox('Max DD', '-${data.maxDrawdown.toStringAsFixed(2)}R'),
+        _metricBox('Max DD', _drawdownText(data.maxDrawdown)),
       ],
     );
   }
@@ -156,7 +156,7 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Net result: ${_signed(data.netR)} · Max drawdown: -${data.maxDrawdown.toStringAsFixed(2)}R',
+            'Net result: ${_signed(data.netR)} · Max drawdown: ${_drawdownText(data.maxDrawdown)}',
             style: pw.TextStyle(
               fontSize: 10,
               color: PdfColor.fromHex('#64748B'),
@@ -346,7 +346,10 @@ class PdfReportService {
   static String _signed(double value) {
     return '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}R';
   }
-
+  static String _drawdownText(double value) {
+    if (value.abs() < 0.005) return '0.00R';
+    return '-${value.toStringAsFixed(2)}R';
+  }
   static String _gradeLabel(TradeGrade grade) {
     switch (grade) {
       case TradeGrade.a:
