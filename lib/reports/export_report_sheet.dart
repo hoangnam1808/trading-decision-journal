@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/trades_store.dart';
+import 'pdf_report_service.dart';
 import 'report_builder.dart';
-import 'report_preview_screen.dart';
 import 'report_options.dart';
+import 'report_preview_screen.dart';
 
 Future<void> showExportReportSheet(BuildContext context) {
   return showModalBottomSheet(
@@ -26,6 +27,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
   ReportFormat _format = ReportFormat.image;
   ReportPeriod _period = ReportPeriod.currentFilter;
   DateTimeRange? _customRange;
+  bool _exporting = false;
 
   String _formatLabel(ReportFormat format) {
     switch (format) {
@@ -72,19 +74,17 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         return '$start → $end';
     }
   }
+
   String _reportPeriodLabel(BuildContext context) {
     final store = context.read<TradesStore>();
 
     switch (_period) {
       case ReportPeriod.currentFilter:
         return store.timeFilterLabel(isVi: false);
-
       case ReportPeriod.thisMonth:
         return 'This month';
-
       case ReportPeriod.thisYear:
         return 'This year';
-
       case ReportPeriod.custom:
         if (_customRange == null) return 'Custom range';
 
@@ -140,37 +140,51 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
     });
   }
 
-  void _export() {
-    final store = context.read<TradesStore>();
+  Future<void> _export() async {
+    if (_exporting) return;
 
-    final trades = store.itemsForReportPeriod(
-      period: _period,
-      customRange: _customRange,
-    );
+    setState(() => _exporting = true);
 
-    final data = ReportBuilder.build(
-      trades: trades,
-      periodLabel: _reportPeriodLabel(context),
-    );
+    try {
+      final store = context.read<TradesStore>();
 
-    Navigator.of(context).pop();
+      final trades = store.itemsForReportPeriod(
+        period: _period,
+        customRange: _customRange,
+      );
 
-    if (_format == ReportFormat.image) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ReportPreviewScreen(data: data),
+      final data = ReportBuilder.build(
+        trades: trades,
+        periodLabel: _reportPeriodLabel(context),
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pop();
+
+      if (_format == ReportFormat.image) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ReportPreviewScreen(data: data),
+          ),
+        );
+        return;
+      }
+
+      await PdfReportService.exportAndShare(data);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export report failed: $e'),
         ),
       );
-      return;
+    } finally {
+      if (mounted) {
+        setState(() => _exporting = false);
+      }
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'PDF report coming next · ${trades.length} trades',
-        ),
-      ),
-    );
   }
 
   @override
@@ -273,9 +287,15 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: _export,
-                icon: const Icon(Icons.ios_share_outlined),
-                label: const Text('Export report'),
+                onPressed: _exporting ? null : _export,
+                icon: _exporting
+                    ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+                    : const Icon(Icons.ios_share_outlined),
+                label: Text(_exporting ? 'Exporting...' : 'Export report'),
               ),
             ),
           ],
