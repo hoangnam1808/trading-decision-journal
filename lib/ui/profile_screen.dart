@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/strings.dart';
 import '../state/app_settings.dart';
+import '../reports/export_report_sheet.dart';
 import 'request_review_card.dart';
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -155,6 +156,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
+        _ReportExportCard(
+          onTap: () => showExportReportSheet(context),
+        ),
         const SizedBox(height: 16),
         const RequestReviewCard(),
         const SizedBox(height: 16),
@@ -166,6 +170,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+class _ReportExportCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ReportExportCard({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: primary.withOpacity(0.10),
+                  child: Icon(
+                    Icons.assessment_outlined,
+                    color: primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reports & Export',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Export your trading performance as an image or PDF report.',
+                        style: TextStyle(
+                          color: Colors.black54,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.ios_share_outlined),
+                label: const Text('Export Report'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -31,7 +31,6 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
     setState(() => _exporting = true);
 
     try {
-      // Đợi frame hiện tại render xong trước khi capture.
       await Future.delayed(const Duration(milliseconds: 200));
 
       final boundary = _captureKey.currentContext?.findRenderObject()
@@ -110,7 +109,7 @@ class _ReportPreviewScreenState extends State<ReportPreviewScreen> {
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              Transform.scale(
+              child: Transform.scale(
                 scale: 0.42,
                 alignment: Alignment.topCenter,
                 child: preview,
