@@ -152,7 +152,17 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         period: _period,
         customRange: _customRange,
       );
+      if (trades.isEmpty) {
+        if (!mounted) return;
 
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No trades in this period.'),
+          ),
+        );
+
+        return;
+      }
       final data = ReportBuilder.build(
         trades: trades,
         periodLabel: _reportPeriodLabel(context),
