@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/trades_store.dart';
+import 'report_builder.dart';
+import 'report_preview_screen.dart';
 import 'report_options.dart';
 
 Future<void> showExportReportSheet(BuildContext context) {
@@ -70,6 +72,27 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         return '$start → $end';
     }
   }
+  String _reportPeriodLabel(BuildContext context) {
+    final store = context.read<TradesStore>();
+
+    switch (_period) {
+      case ReportPeriod.currentFilter:
+        return store.timeFilterLabel(isVi: false);
+
+      case ReportPeriod.thisMonth:
+        return 'This month';
+
+      case ReportPeriod.thisYear:
+        return 'This year';
+
+      case ReportPeriod.custom:
+        if (_customRange == null) return 'Custom range';
+
+        final start = _formatDate(_customRange!.start);
+        final end = _formatDate(_customRange!.end);
+        return '$start → $end';
+    }
+  }
 
   String _periodSubtitle(ReportPeriod period) {
     switch (period) {
@@ -125,12 +148,26 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
       customRange: _customRange,
     );
 
+    final data = ReportBuilder.build(
+      trades: trades,
+      periodLabel: _reportPeriodLabel(context),
+    );
+
     Navigator.of(context).pop();
+
+    if (_format == ReportFormat.image) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ReportPreviewScreen(data: data),
+        ),
+      );
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Export ${_formatLabel(_format)} · ${trades.length} trades',
+          'PDF report coming next · ${trades.length} trades',
         ),
       ),
     );

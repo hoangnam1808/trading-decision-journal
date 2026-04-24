@@ -431,6 +431,10 @@ class _EquityScreenState extends State<EquityScreen> {
             formatValue: (value) => _formatValue(value, s, cashPerR),
           ),
         const SizedBox(height: 16),
+        _ExportReportCard(
+          onTap: () => showExportReportSheet(context),
+        ),
+        const SizedBox(height: 16),
         const RequestReviewCard(),
       ],
     );
@@ -832,6 +836,65 @@ class _MetricCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+class _ExportReportCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ExportReportCard({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: primary.withOpacity(0.10),
+              child: Icon(
+                Icons.ios_share_outlined,
+                color: primary,
+              ),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Export Performance Report',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Create a clean image or PDF report from your trading journal.',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.file_download_outlined),
+              label: const Text('Export'),
+            ),
+          ],
         ),
       ),
     );
