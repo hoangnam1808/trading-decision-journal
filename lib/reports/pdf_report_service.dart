@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import 'equity_chart_png.dart';
 
 import '../models/trade.dart';
 import 'report_data.dart';
@@ -12,6 +13,9 @@ import 'report_data.dart';
 class PdfReportService {
   static Future<void> exportAndShare(ReportData data) async {
     final pdf = pw.Document();
+
+    final chartBytes = await EquityChartPng.generate(data.equityCurve);
+    final chartImage = pw.MemoryImage(chartBytes);
 
     pdf.addPage(
       pw.MultiPage(
@@ -23,7 +27,7 @@ class PdfReportService {
             pw.SizedBox(height: 18),
             _buildSummaryGrid(data),
             pw.SizedBox(height: 18),
-            _buildEquitySummary(data),
+            _buildEquityChart(data, chartImage),
             pw.SizedBox(height: 18),
             _buildGradeBreakdown(data),
             pw.SizedBox(height: 18),
@@ -137,27 +141,26 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildEquitySummary(ReportData data) {
-    final curveText = data.equityCurve
-        .map((v) => v.toStringAsFixed(1))
-        .join(' → ');
-
+  static pw.Widget _buildEquityChart(
+      ReportData data,
+      pw.MemoryImage chartImage,
+      ) {
     return _section(
-      title: 'Equity Summary',
+      title: 'Equity Curve',
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            'Equity curve points in R:',
-            style: pw.TextStyle(
-              fontSize: 11,
-              fontWeight: pw.FontWeight.bold,
-            ),
+          pw.Image(
+            chartImage,
+            fit: pw.BoxFit.contain,
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 8),
           pw.Text(
-            curveText.isEmpty ? 'No equity data.' : curveText,
-            style: const pw.TextStyle(fontSize: 9),
+            'Net result: ${_signed(data.netR)} · Max drawdown: -${data.maxDrawdown.toStringAsFixed(2)}R',
+            style: pw.TextStyle(
+              fontSize: 10,
+              color: PdfColor.fromHex('#64748B'),
+            ),
           ),
         ],
       ),
@@ -184,21 +187,25 @@ class PdfReportService {
                   child: pw.LayoutBuilder(
                     builder: (context, constraints) {
                       final ratio = (g.percent / 100).clamp(0.0, 1.0);
-                      final barWidth = constraints!.maxWidth * ratio;
+                      final maxWidth = constraints?.maxWidth ?? 160;
+                      final barWidth = maxWidth * ratio;
 
                       return pw.Container(
                         height: 8,
                         decoration: pw.BoxDecoration(
                           color: PdfColor.fromHex('#E2E8F0'),
-                          borderRadius: pw.BorderRadius.circular(999),
+                          borderRadius: pw.BorderRadius.circular(4),
                         ),
-                        child: pw.Align(
+                        child: barWidth <= 0
+                            ? pw.SizedBox()
+                            : pw.Align(
                           alignment: pw.Alignment.centerLeft,
                           child: pw.Container(
                             width: barWidth,
+                            height: 8,
                             decoration: pw.BoxDecoration(
                               color: _gradePdfColor(g.grade),
-                              borderRadius: pw.BorderRadius.circular(999),
+                              borderRadius: pw.BorderRadius.circular(4),
                             ),
                           ),
                         ),
