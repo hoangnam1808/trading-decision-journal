@@ -2,6 +2,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import '../models/trade.dart';
+import '../reports/report_options.dart';
 enum TimeFilter { all, today, week, month, year, custom }
 class TradesStore extends ChangeNotifier {
   static const _storageKey = 'decision_journal_trades_v1';
@@ -17,6 +18,33 @@ class TradesStore extends ChangeNotifier {
   final List<Trade> _items = [];
   List<Trade> get items => List.unmodifiable(_items);
   List<Trade> get filteredItems => _applyTimeFilter(items);
+  List<Trade> itemsForReportPeriod({
+    required ReportPeriod period,
+    DateTimeRange? customRange,
+  }) {
+    switch (period) {
+      case ReportPeriod.currentFilter:
+        return filteredItems;
+
+      case ReportPeriod.thisMonth:
+        final now = DateTime.now();
+        final start = DateTime(now.year, now.month, 1);
+        final end = _endOfDay(now);
+        return _filterByRange(items, start, end);
+
+      case ReportPeriod.thisYear:
+        final now = DateTime.now();
+        final start = DateTime(now.year, 1, 1);
+        final end = _endOfDay(now);
+        return _filterByRange(items, start, end);
+
+      case ReportPeriod.custom:
+        if (customRange == null) return filteredItems;
+        final start = _startOfDay(customRange.start);
+        final end = _endOfDay(customRange.end);
+        return _filterByRange(items, start, end);
+    }
+  }
   String timeFilterLabel({required bool isVi}) {
     switch (currentFilter) {
       case TimeFilter.all:
@@ -91,12 +119,18 @@ class TradesStore extends ChangeNotifier {
         return source;
     }
 
+    return _filterByRange(source, start, end);
+  }
+  List<Trade> _filterByRange(
+      List<Trade> source,
+      DateTime start,
+      DateTime end,
+      ) {
     return source.where((t) {
       final dt = t.dateTime;
       return !dt.isBefore(start) && !dt.isAfter(end);
     }).toList();
   }
-
   DateTime _startOfDay(DateTime dt) {
     return DateTime(dt.year, dt.month, dt.day);
   }

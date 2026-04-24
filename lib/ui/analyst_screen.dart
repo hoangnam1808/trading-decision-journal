@@ -5,6 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../l10n/strings.dart';
 import '../models/trade.dart';
+import '../reports/export_report_sheet.dart';
 import '../state/app_settings.dart';
 import '../state/trades_store.dart';
 import 'request_review_card.dart';
@@ -189,6 +190,14 @@ class _EquityScreenState extends State<EquityScreen> {
         title: Text(s.analyst),
         actions: [
           IconButton(
+            tooltip: s.isVi ? 'Xuất report' : 'Export report',
+            icon: const Icon(Icons.ios_share_outlined),
+            onPressed: () {
+              showExportReportSheet(context);
+            },
+          ),
+          IconButton(
+            tooltip: s.isVi ? 'Lọc thời gian' : 'Time filter',
             icon: const Icon(Icons.filter_alt_outlined),
             onPressed: () {
               showTimeFilterBottomSheet(context);
