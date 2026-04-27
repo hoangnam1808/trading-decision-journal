@@ -17,15 +17,17 @@ extension TradeGradeX on TradeGrade {
   };
 }
 
-@immutable
+@immutable@immutable
 class TradeChecklist {
   final bool contextOk;
+  final bool entryZoneOk;
   final bool riskOk;
   final bool executionOk;
   final bool emotional;
 
   const TradeChecklist({
     required this.contextOk,
+    required this.entryZoneOk,
     required this.riskOk,
     required this.executionOk,
     required this.emotional,
@@ -33,12 +35,14 @@ class TradeChecklist {
 
   TradeChecklist copyWith({
     bool? contextOk,
+    bool? entryZoneOk,
     bool? riskOk,
     bool? executionOk,
     bool? emotional,
   }) {
     return TradeChecklist(
       contextOk: contextOk ?? this.contextOk,
+      entryZoneOk: entryZoneOk ?? this.entryZoneOk,
       riskOk: riskOk ?? this.riskOk,
       executionOk: executionOk ?? this.executionOk,
       emotional: emotional ?? this.emotional,
@@ -47,14 +51,18 @@ class TradeChecklist {
 
   Map<String, dynamic> toJson() => {
     'contextOk': contextOk,
+    'entryZoneOk': entryZoneOk,
     'riskOk': riskOk,
     'executionOk': executionOk,
     'emotional': emotional,
   };
 
   factory TradeChecklist.fromJson(Map<String, dynamic> json) {
+    final oldContextOk = json['contextOk'] ?? false;
+
     return TradeChecklist(
-      contextOk: json['contextOk'] ?? false,
+      contextOk: oldContextOk,
+      entryZoneOk: json['entryZoneOk'] ?? oldContextOk,
       riskOk: json['riskOk'] ?? false,
       executionOk: json['executionOk'] ?? false,
       emotional: json['emotional'] ?? false,
@@ -64,16 +72,26 @@ class TradeChecklist {
 
 TradeGrade classifyTrade(TradeChecklist c) {
   final failCount =
-      (c.contextOk ? 0 : 1) + (c.riskOk ? 0 : 1) + (c.executionOk ? 0 : 1);
-  final hasMajorIssue = !c.contextOk || failCount >= 2;
+      (c.contextOk ? 0 : 1) +
+          (c.entryZoneOk ? 0 : 1) +
+          (c.executionOk ? 0 : 1) +
+          (c.riskOk ? 0 : 1) +
+          (c.emotional ? 1 : 0);
 
-  if (hasMajorIssue || (c.emotional && !c.contextOk)) return TradeGrade.b;
-  if (c.contextOk && c.riskOk && c.executionOk && !c.emotional) {
+  final hasMajorIssue = !c.contextOk || !c.riskOk || c.emotional;
+
+  if (hasMajorIssue || failCount >= 2) return TradeGrade.b;
+
+  if (c.contextOk &&
+      c.entryZoneOk &&
+      c.executionOk &&
+      c.riskOk &&
+      !c.emotional) {
     return TradeGrade.a;
   }
+
   return TradeGrade.aMinus;
 }
-
 enum Market { forex, crypto, stocks, futures }
 
 extension MarketX on Market {

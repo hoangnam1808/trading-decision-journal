@@ -55,6 +55,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
 
   TradeChecklist c = const TradeChecklist(
     contextOk: true,
+    entryZoneOk: true,
     riskOk: true,
     executionOk: true,
     emotional: false,
@@ -175,6 +176,95 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     if (text.isEmpty) return 0.0;
     return double.tryParse(text) ?? 0.0;
   }
+  void _showChecklistGuide() {
+    final s = S.read(context);
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.isVi ? 'Cách dùng checklist' : 'How to use the checklist',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  s.isVi
+                      ? 'Checklist này không dùng để đoán lệnh thắng hay thua. Nó dùng để đánh giá chất lượng quyết định và phân loại lệnh A / A- / B.'
+                      : 'This checklist is not used to predict whether a trade will win or lose. It is used to evaluate decision quality and classify trades as A / A- / B.',
+                  style: const TextStyle(height: 1.45),
+                ),
+                const SizedBox(height: 18),
+
+                _GuideItem(
+                  title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
+                  body: s.isVi
+                      ? 'Thị trường đang có điều kiện phù hợp với chiến lược của bạn. Ví dụ: trend-following cần xu hướng rõ; breakout cần vùng tích lũy hoặc mức giá quan trọng; Wyckoff/range cần range hoặc vùng đấu giá rõ.'
+                      : 'The market condition supports your strategy. Example: trend-following needs a clear trend; breakout needs consolidation or a key level; Wyckoff/range needs a clear range or auction area.',
+                ),
+                _GuideItem(
+                  title: s.isVi ? 'Vùng vào hợp lệ' : 'Entry zone valid',
+                  body: s.isVi
+                      ? 'Điểm vào nằm trong vùng hoặc điều kiện mà hệ thống cho phép, không phải vào ngẫu nhiên hoặc chase ngoài kế hoạch. Ví dụ: Wyckoff/range vào ở biên range, Spring/UTAD; trend-following vào ở pullback; breakout vào breakout hoặc retest; SMC/ICT vào POI, OB, FVG đúng điều kiện; mean reversion vào vùng extreme; scalping vào đúng signal zone/time window.'
+                      : 'The entry is within the system’s planned area or condition, not random or chased. Example: Wyckoff/range at range edge, Spring/UTAD; trend-following at pullback; breakout at breakout or valid retest; SMC/ICT at POI, OB, FVG; mean reversion at an extreme; scalping at the right signal zone/time window.',
+                ),
+                _GuideItem(
+                  title: s.isVi ? 'Execution đúng' : 'Execution valid',
+                  body: s.isVi
+                      ? 'Bạn vào/ra lệnh theo đúng quy trình đã định. Không vào quá sớm, không chase khi giá đã đi xa, không thoát lệnh tùy hứng nếu chưa có lý do.'
+                      : 'Entry and exit follow the plan. No early entry, no chasing after price has moved too far, and no emotional exit without a valid reason.',
+                ),
+                _GuideItem(
+                  title: s.isVi ? 'Risk đúng' : 'Risk valid',
+                  body: s.isVi
+                      ? 'Lệnh tuân thủ quy tắc rủi ro: đúng size, stop loss hợp lý, R:R đạt mức tối thiểu, không tăng size để gỡ, không vi phạm giới hạn rủi ro ngày/tuần.'
+                      : 'The trade respects your risk rules: correct size, valid stop loss, minimum R:R, no revenge sizing, and no daily/weekly risk limit violation.',
+                ),
+                _GuideItem(
+                  title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',
+                  body: s.isVi
+                      ? 'Lệnh không bị thúc đẩy bởi FOMO, revenge trade, overtrade hoặc phá kỷ luật. Bạn vào lệnh vì setup, không phải vì cảm xúc.'
+                      : 'The trade is not driven by FOMO, revenge trading, overtrading, or discipline breaks. You enter because of the setup, not emotion.',
+                ),
+
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    color: primary.withOpacity(0.08),
+                  ),
+                  child: Text(
+                    s.isVi
+                        ? 'A = đủ tiêu chí tốt\nA- = có 1 điểm chưa tối ưu\nB = sai bối cảnh, sai risk, mất kỷ luật cảm xúc hoặc sai từ 2 yếu tố trở lên'
+                        : 'A = all key criteria are valid\nA- = one non-critical issue\nB = invalid context, invalid risk, emotional discipline break, or 2+ failed criteria',
+                    style: TextStyle(
+                      color: primary,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
   double? _previewR() {
     final entry = _parse(_entryCtrl.text);
     final sl = _parse(_stopLossCtrl.text);
@@ -249,6 +339,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _afterImagePath = null;
         c = const TradeChecklist(
           contextOk: true,
+          entryZoneOk: true,
           riskOk: true,
           executionOk: true,
           emotional: false,
@@ -637,39 +728,88 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
               title: s.decisionChecklist,
               child: Column(
                 children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s.isVi
+                              ? 'Dùng để phân loại chất lượng lệnh A / A- / B'
+                              : 'Used to classify trade quality: A / A- / B',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w600,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: s.isVi ? 'Cách dùng checklist' : 'How to use checklist',
+                        onPressed: () {
+                          _showChecklistGuide();
+                        },
+                        icon: const Icon(Icons.info_outline),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
                   _ChecklistTile(
-                    title: s.contextOk,
-                    subtitle: s.contextSub,
+                    title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
+                    subtitle: s.isVi
+                        ? 'Thị trường phù hợp với chiến lược'
+                        : 'Market condition supports the strategy',
                     value: c.contextOk,
                     onChanged: (v) {
                       setState(() => c = c.copyWith(contextOk: v));
                     },
                   ),
                   const SizedBox(height: 10),
+
                   _ChecklistTile(
-                    title: s.executionOk,
-                    subtitle: s.executionSub,
+                    title: s.isVi ? 'Vùng vào hợp lệ' : 'Entry zone valid',
+                    subtitle: s.isVi
+                        ? 'Điểm vào nằm trong vùng hệ thống cho phép'
+                        : 'Entry is within the system’s planned area',
+                    value: c.entryZoneOk,
+                    onChanged: (v) {
+                      setState(() => c = c.copyWith(entryZoneOk: v));
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  _ChecklistTile(
+                    title: s.isVi ? 'Execution đúng' : 'Execution valid',
+                    subtitle: s.isVi
+                        ? 'Vào/ra lệnh đúng theo kế hoạch'
+                        : 'Entry/exit follows the plan',
                     value: c.executionOk,
                     onChanged: (v) {
                       setState(() => c = c.copyWith(executionOk: v));
                     },
                   ),
                   const SizedBox(height: 10),
+
                   _ChecklistTile(
-                    title: s.riskOk,
-                    subtitle: s.riskSub,
+                    title: s.isVi ? 'Risk đúng' : 'Risk valid',
+                    subtitle: s.isVi
+                        ? 'Tuân thủ size, stop loss và rủi ro'
+                        : 'Size, stop loss and risk rules are respected',
                     value: c.riskOk,
                     onChanged: (v) {
                       setState(() => c = c.copyWith(riskOk: v));
                     },
                   ),
                   const SizedBox(height: 10),
+
                   _ChecklistTile(
-                    title: s.emotionalOvertrade,
-                    subtitle: s.emotionalSub,
-                    value: c.emotional,
+                    title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',
+                    subtitle: s.isVi
+                        ? 'Không FOMO, revenge trade, overtrade'
+                        : 'No FOMO, revenge trade or overtrade',
+                    value: !c.emotional,
                     onChanged: (v) {
-                      setState(() => c = c.copyWith(emotional: v));
+                      setState(() => c = c.copyWith(emotional: !v));
                     },
                   ),
                 ],
@@ -793,6 +933,8 @@ class _ImagePickerCard extends StatelessWidget {
   final String? imagePath;
   final VoidCallback onTap;
 
+
+
   const _ImagePickerCard({
     required this.title,
     required this.subtitle,
@@ -870,6 +1012,42 @@ class _ImagePickerCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+class _GuideItem extends StatelessWidget {
+  final String title;
+  final String body;
+
+  const _GuideItem({
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 15.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              height: 1.4,
+            ),
+          ),
+        ],
       ),
     );
   }

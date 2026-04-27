@@ -276,24 +276,28 @@ class TradeDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 _ChecklistRow(
-                  title: s.contextOk,
+                  title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
                   value: currentTrade.checklist.contextOk,
                 ),
                 const Divider(height: 18),
                 _ChecklistRow(
-                  title: s.executionOk,
+                  title: s.isVi ? 'Vùng vào hợp lệ' : 'Entry zone valid',
+                  value: currentTrade.checklist.entryZoneOk,
+                ),
+                const Divider(height: 18),
+                _ChecklistRow(
+                  title: s.isVi ? 'Execution đúng' : 'Execution valid',
                   value: currentTrade.checklist.executionOk,
                 ),
                 const Divider(height: 18),
                 _ChecklistRow(
-                  title: s.riskOk,
+                  title: s.isVi ? 'Risk đúng' : 'Risk valid',
                   value: currentTrade.checklist.riskOk,
                 ),
                 const Divider(height: 18),
                 _ChecklistRow(
-                  title: s.emotionalOvertrade,
-                  value: currentTrade.checklist.emotional,
-                  invertColor: true,
+                  title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',
+                  value: !currentTrade.checklist.emotional,
                 ),
               ],
             ),
@@ -482,17 +486,17 @@ class _DetailStat extends StatelessWidget {
 class _ChecklistRow extends StatelessWidget {
   final String title;
   final bool value;
-  final bool invertColor;
+
 
   const _ChecklistRow({
     required this.title,
     required this.value,
-    this.invertColor = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final good = invertColor ? !value : value;
+    final s = S.of(context);
+    final good = value;
     final color = good ? Colors.green : Colors.red;
 
     return Row(
@@ -509,7 +513,9 @@ class _ChecklistRow extends StatelessWidget {
           ),
         ),
         Text(
-          value ? 'Yes' : 'No',
+          value
+              ? (s.isVi ? 'Đạt' : 'Yes')
+              : (s.isVi ? 'Không đạt' : 'No'),
           style: TextStyle(
             color: color,
             fontWeight: FontWeight.w700,
