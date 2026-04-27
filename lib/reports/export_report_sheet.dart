@@ -6,6 +6,7 @@ import 'pdf_report_service.dart';
 import 'report_builder.dart';
 import 'report_options.dart';
 import 'report_preview_screen.dart';
+import '../state/app_settings.dart';
 
 Future<void> showExportReportSheet(BuildContext context) {
   return showModalBottomSheet(
@@ -163,9 +164,12 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
 
         return;
       }
+      final settings = context.read<AppSettings>();
+
       final data = ReportBuilder.build(
         trades: trades,
         periodLabel: _reportPeriodLabel(context),
+        cashPerR: settings.cashPerR,
       );
 
       if (!mounted) return;

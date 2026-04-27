@@ -5,6 +5,7 @@ class ReportBuilder {
   static ReportData build({
     required List<Trade> trades,
     required String periodLabel,
+    required double cashPerR,
   }) {
     final sortedTrades = [...trades]
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
@@ -22,6 +23,15 @@ class ReportBuilder {
 
     final equityCurve = _buildEquityCurve(sortedTrades);
     final maxDrawdown = _maxDrawdown(equityCurve);
+    final totalFees = sortedTrades.fold<double>(
+      0,
+          (sum, trade) => sum + trade.fee,
+    );
+
+    final netMoney = sortedTrades.fold<double>(
+      0,
+          (sum, trade) => sum + trade.resultR * cashPerR - trade.fee,
+    );
 
     return ReportData(
       title: 'Decision Journal Report',
@@ -33,6 +43,8 @@ class ReportBuilder {
       avgR: avgR,
       winrate: winrate,
       maxDrawdown: maxDrawdown,
+      totalFees: totalFees,
+      netMoney: netMoney,
       equityCurve: equityCurve,
       gradeBreakdown: _buildGradeBreakdown(sortedTrades),
       strategyBreakdown: _buildStrategyBreakdown(sortedTrades),

@@ -5,6 +5,9 @@ import 'pdf_report_service.dart';
 import 'report_builder.dart';
 import 'report_options.dart';
 import 'report_preview_screen.dart';
+import 'package:provider/provider.dart';
+
+import '../state/app_settings.dart';
 
 Future<void> showAnalystExportSheet(
     BuildContext context, {
@@ -84,9 +87,12 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
         return;
       }
 
+      final settings = context.read<AppSettings>();
+
       final data = ReportBuilder.build(
         trades: widget.trades,
         periodLabel: widget.contextLabel,
+        cashPerR: settings.cashPerR,
       );
 
       if (!mounted) return;

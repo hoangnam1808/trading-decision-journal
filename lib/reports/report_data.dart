@@ -43,6 +43,9 @@ class ReportData {
   final double winrate;
   final double maxDrawdown;
 
+  final double totalFees;
+  final double netMoney;
+
   final List<double> equityCurve;
   final List<GradeReportData> gradeBreakdown;
   final List<StrategyReportData> strategyBreakdown;
@@ -58,6 +61,8 @@ class ReportData {
     required this.avgR,
     required this.winrate,
     required this.maxDrawdown,
+    required this.totalFees,
+    required this.netMoney,
     required this.equityCurve,
     required this.gradeBreakdown,
     required this.strategyBreakdown,

@@ -105,13 +105,15 @@ class PdfReportService {
         _metricBox('Avg R', _signed(data.avgR)),
         _metricBox('Winrate', '${data.winrate.toStringAsFixed(1)}%'),
         _metricBox('Max DD', _drawdownText(data.maxDrawdown)),
+        _metricBox('Total Fees', '-\$${data.totalFees.toStringAsFixed(2)}'),
+        _metricBox('Net Money', _moneyText(data.netMoney)),
       ],
     );
   }
 
   static pw.Widget _metricBox(String label, String value) {
     return pw.Container(
-      width: 100,
+      width: 135,
       padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColor.fromHex('#E2E8F0')),
@@ -156,7 +158,7 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            'Net result: ${_signed(data.netR)} · Max drawdown: ${_drawdownText(data.maxDrawdown)}',
+            'Net result: ${_signed(data.netR)} · Net money: ${_moneyText(data.netMoney)} · Fees: -\$${data.totalFees.toStringAsFixed(2)}',
             style: pw.TextStyle(
               fontSize: 10,
               color: PdfColor.fromHex('#64748B'),
@@ -345,6 +347,9 @@ class PdfReportService {
 
   static String _signed(double value) {
     return '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}R';
+  }
+  static String _moneyText(double value) {
+    return '${value >= 0 ? '+' : ''}\$${value.toStringAsFixed(2)}';
   }
   static String _drawdownText(double value) {
     if (value.abs() < 0.005) return '0.00R';
