@@ -6,13 +6,26 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'equity_chart_png.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/trade.dart';
 import 'report_data.dart';
 
 class PdfReportService {
   static Future<void> exportAndShare(ReportData data) async {
-    final pdf = pw.Document();
+    final regularFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/NotoSans-Regular.ttf'),
+    );
+    final boldFont = pw.Font.ttf(
+      await rootBundle.load('assets/fonts/NotoSans-Bold.ttf'),
+    );
+
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: regularFont,
+        bold: boldFont,
+      ),
+    );
 
     final chartBytes = await EquityChartPng.generate(data.equityCurve);
     final chartImage = pw.MemoryImage(chartBytes);
