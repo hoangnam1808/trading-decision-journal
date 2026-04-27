@@ -5,11 +5,12 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../l10n/strings.dart';
 import '../models/trade.dart';
-import '../reports/export_report_sheet.dart';
+
 import '../state/app_settings.dart';
 import '../state/trades_store.dart';
 import 'request_review_card.dart';
 import 'time_filter_sheet.dart';
+import '../reports/analyst_export_sheet.dart';
 
 enum AnalystView { equity, calendar }
 enum EquityScenario { all, noB, onlyA }
@@ -52,7 +53,20 @@ class _EquityScreenState extends State<EquityScreen> {
         return s.onlyATrades;
     }
   }
+  String _analystExportContextLabel({
+    required S s,
+    required TradesStore store,
+    required EquityScenario scenario,
+    required String effectiveStrategyFilter,
+  }) {
+    final period = store.timeFilterLabel(isVi: s.isVi);
+    final scenarioLabel = _scenarioTitle(s, scenario);
+    final strategyLabel = effectiveStrategyFilter == _allStrategiesKey
+        ? s.allStrategies
+        : effectiveStrategyFilter;
 
+    return '$period · $scenarioLabel · $strategyLabel';
+  }
   String _viewLabel(S s, AnalystView view) {
     switch (view) {
       case AnalystView.equity:
@@ -154,7 +168,8 @@ class _EquityScreenState extends State<EquityScreen> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final settings = context.watch<AppSettings>();
-    final allItems = context.watch<TradesStore>().filteredItems;
+    final store = context.watch<TradesStore>();
+    final allItems = store.filteredItems;
 
     final persistedCashText = settings.cashPerR.toStringAsFixed(
       settings.cashPerR % 1 == 0 ? 0 : 2,
@@ -193,7 +208,16 @@ class _EquityScreenState extends State<EquityScreen> {
             tooltip: s.isVi ? 'Xuất report' : 'Export report',
             icon: const Icon(Icons.ios_share_outlined),
             onPressed: () {
-              showExportReportSheet(context);
+              showAnalystExportSheet(
+                context,
+                trades: trades,
+                contextLabel: _analystExportContextLabel(
+                  s: s,
+                  store: store,
+                  scenario: _scenario,
+                  effectiveStrategyFilter: effectiveStrategyFilter,
+                ),
+              );
             },
           ),
           IconButton(
@@ -432,7 +456,16 @@ class _EquityScreenState extends State<EquityScreen> {
           ),
         const SizedBox(height: 16),
         _ExportReportCard(
-          onTap: () => showExportReportSheet(context),
+          onTap: () => showAnalystExportSheet(
+            context,
+            trades: trades,
+            contextLabel: _analystExportContextLabel(
+              s: s,
+              store: context.read<TradesStore>(),
+              scenario: _scenario,
+              effectiveStrategyFilter: effectiveStrategyFilter,
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         const RequestReviewCard(),
