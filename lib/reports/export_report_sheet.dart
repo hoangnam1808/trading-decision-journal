@@ -7,7 +7,7 @@ import 'report_builder.dart';
 import 'report_options.dart';
 import 'report_preview_screen.dart';
 import '../state/app_settings.dart';
-
+import '../l10n/strings.dart';
 Future<void> showExportReportSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
@@ -30,21 +30,25 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
   DateTimeRange? _customRange;
   bool _exporting = false;
 
-  String _formatLabel(ReportFormat format) {
+  String _formatLabel(ReportFormat format, bool isVi) {
     switch (format) {
       case ReportFormat.image:
-        return 'Image summary';
+        return isVi ? 'Ảnh tóm tắt' : 'Image summary';
       case ReportFormat.pdf:
-        return 'PDF report';
+        return isVi ? 'Báo cáo PDF' : 'PDF report';
     }
   }
 
-  String _formatSubtitle(ReportFormat format) {
+  String _formatSubtitle(ReportFormat format, bool isVi) {
     switch (format) {
       case ReportFormat.image:
-        return 'Share a clean performance card.';
+        return isVi
+            ? 'Chia sẻ nhanh một ảnh hiệu suất gọn đẹp.'
+            : 'Share a clean performance card.';
       case ReportFormat.pdf:
-        return 'Export a detailed performance report.';
+        return isVi
+            ? 'Xuất báo cáo hiệu suất chi tiết.'
+            : 'Export a detailed performance report.';
     }
   }
 
@@ -62,13 +66,21 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
 
     switch (period) {
       case ReportPeriod.currentFilter:
-        return 'Current filter: ${store.timeFilterLabel(isVi: false)}';
+        final isVi = S.of(context).isVi;
+        return isVi
+            ? 'Bộ lọc hiện tại: ${store.timeFilterLabel(isVi: true)}'
+            : 'Current filter: ${store.timeFilterLabel(isVi: false)}';
+
       case ReportPeriod.thisMonth:
-        return 'This month';
+        return S.of(context).isVi ? 'Tháng này' : 'This month';
+
       case ReportPeriod.thisYear:
-        return 'This year';
+        return S.of(context).isVi ? 'Năm nay' : 'This year';
+
       case ReportPeriod.custom:
-        if (_customRange == null) return 'Custom range';
+        if (_customRange == null) {
+          return S.of(context).isVi ? 'Khoảng tùy chỉnh' : 'Custom range';
+        }
 
         final start = _formatDate(_customRange!.start);
         final end = _formatDate(_customRange!.end);
@@ -95,16 +107,24 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
     }
   }
 
-  String _periodSubtitle(ReportPeriod period) {
+  String _periodSubtitle(ReportPeriod period, bool isVi) {
     switch (period) {
       case ReportPeriod.currentFilter:
-        return 'Use the same time filter currently shown in the app.';
+        return isVi
+            ? 'Dùng đúng bộ lọc thời gian hiện tại trong app.'
+            : 'Use the same time filter currently shown in the app.';
       case ReportPeriod.thisMonth:
-        return 'Export trades from the current month.';
+        return isVi
+            ? 'Xuất các lệnh trong tháng hiện tại.'
+            : 'Export trades from the current month.';
       case ReportPeriod.thisYear:
-        return 'Export trades from the current year.';
+        return isVi
+            ? 'Xuất các lệnh trong năm hiện tại.'
+            : 'Export trades from the current year.';
       case ReportPeriod.custom:
-        return 'Choose a custom start and end date.';
+        return isVi
+            ? 'Chọn khoảng thời gian tùy chỉnh.'
+            : 'Choose a custom start and end date.';
     }
   }
 
@@ -157,11 +177,14 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No trades in this period.'),
+          SnackBar(
+            content: Text(
+              S.of(context).isVi
+                  ? 'Không có lệnh nào trong khoảng thời gian này.'
+                  : 'No trades in this period.',
+            ),
           ),
         );
-
         return;
       }
       final settings = context.read<AppSettings>();
@@ -203,6 +226,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return SafeArea(
@@ -211,13 +235,13 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const _SheetHeader(),
+            _SheetHeader(isVi: s.isVi),
             const SizedBox(height: 12),
 
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Format',
+                s.isVi ? 'Định dạng' : 'Format',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -228,8 +252,8 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
             _OptionTile(
               selected: _format == ReportFormat.image,
               icon: _formatIcon(ReportFormat.image),
-              title: _formatLabel(ReportFormat.image),
-              subtitle: _formatSubtitle(ReportFormat.image),
+              title: _formatLabel(ReportFormat.image, s.isVi),
+              subtitle: _formatSubtitle(ReportFormat.image, s.isVi),
               onTap: () {
                 setState(() => _format = ReportFormat.image);
               },
@@ -238,8 +262,8 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
             _OptionTile(
               selected: _format == ReportFormat.pdf,
               icon: _formatIcon(ReportFormat.pdf),
-              title: _formatLabel(ReportFormat.pdf),
-              subtitle: _formatSubtitle(ReportFormat.pdf),
+              title: _formatLabel(ReportFormat.pdf, s.isVi),
+              subtitle: _formatSubtitle(ReportFormat.pdf, s.isVi),
               onTap: () {
                 setState(() => _format = ReportFormat.pdf);
               },
@@ -250,7 +274,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Period',
+                s.isVi ? 'Thời gian' : 'Period',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -262,7 +286,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
               selected: _period == ReportPeriod.currentFilter,
               icon: Icons.filter_alt_outlined,
               title: _periodLabel(context, ReportPeriod.currentFilter),
-              subtitle: _periodSubtitle(ReportPeriod.currentFilter),
+              subtitle: _periodSubtitle(ReportPeriod.currentFilter, s.isVi),
               onTap: () {
                 setState(() => _period = ReportPeriod.currentFilter);
               },
@@ -272,7 +296,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
               selected: _period == ReportPeriod.thisMonth,
               icon: Icons.calendar_month_outlined,
               title: _periodLabel(context, ReportPeriod.thisMonth),
-              subtitle: _periodSubtitle(ReportPeriod.thisMonth),
+              subtitle: _periodSubtitle(ReportPeriod.thisMonth, s.isVi),
               onTap: () {
                 setState(() => _period = ReportPeriod.thisMonth);
               },
@@ -282,7 +306,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
               selected: _period == ReportPeriod.thisYear,
               icon: Icons.event_note_outlined,
               title: _periodLabel(context, ReportPeriod.thisYear),
-              subtitle: _periodSubtitle(ReportPeriod.thisYear),
+              subtitle: _periodSubtitle(ReportPeriod.thisYear, s.isVi),
               onTap: () {
                 setState(() => _period = ReportPeriod.thisYear);
               },
@@ -292,7 +316,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
               selected: _period == ReportPeriod.custom,
               icon: Icons.date_range_outlined,
               title: _periodLabel(context, ReportPeriod.custom),
-              subtitle: _periodSubtitle(ReportPeriod.custom),
+              subtitle: _periodSubtitle(ReportPeriod.custom, s.isVi),
               onTap: _pickCustomRange,
             ),
 
@@ -309,7 +333,11 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
                     : const Icon(Icons.ios_share_outlined),
-                label: Text(_exporting ? 'Exporting...' : 'Export report'),
+    label: Text(
+    _exporting
+    ? (s.isVi ? 'Đang xuất...' : 'Exporting...')
+        : (s.isVi ? 'Xuất report' : 'Export report'),
+    ),
               ),
             ),
           ],
@@ -320,8 +348,11 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
 }
 
 class _SheetHeader extends StatelessWidget {
-  const _SheetHeader();
+  final bool isVi;
 
+  const _SheetHeader({
+    required this.isVi,
+  });
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -331,10 +362,10 @@ class _SheetHeader extends StatelessWidget {
           color: Theme.of(context).colorScheme.primary,
         ),
         const SizedBox(width: 10),
-        const Expanded(
+        Expanded(
           child: Text(
-            'Export Report',
-            style: TextStyle(
+            isVi ? 'Xuất report' : 'Export Report',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
