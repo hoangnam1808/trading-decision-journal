@@ -821,18 +821,12 @@ class _CalendarSection extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text('${s.strategy}: ${t.strategy}'),
                           const SizedBox(height: 4),
-                          Builder(
-                            builder: (_) {
-                              final tradeValue = moneyMode ? _tradeMoney(t) : t.resultR;
-
-                              return Text(
-                                '${s.netR}: ${moneyMode ? _moneyText(tradeValue) : t.resultR.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: _valueColor(tradeValue),
-                                ),
-                              );
-                            },
+                          Text(
+                            '${s.netR}: ${moneyMode ? formatValue(t.resultR) : t.resultR.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: _valueColor(t.resultR),
+                            ),
                           ),
                           if (t.note != null && t.note!.isNotEmpty) ...[
                             const SizedBox(height: 4),
@@ -929,21 +923,25 @@ class _ExportReportCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Export Performance Report',
-                    style: TextStyle(
+                    S.of(context).isVi
+                        ? 'Xuất report hiệu suất'
+                        : 'Export Performance Report',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Create a clean image or PDF report from your trading journal.',
-                    style: TextStyle(
+                    S.of(context).isVi
+                        ? 'Tạo ảnh hoặc PDF report từ journal giao dịch của bạn.'
+                        : 'Create a clean image or PDF report from your trading journal.',
+                    style: const TextStyle(
                       color: Colors.black54,
                       height: 1.3,
                     ),
@@ -955,7 +953,7 @@ class _ExportReportCard extends StatelessWidget {
             FilledButton.icon(
               onPressed: onTap,
               icon: const Icon(Icons.file_download_outlined),
-              label: const Text('Export'),
+              label: Text(S.of(context).isVi ? 'Xuất' : 'Export'),
             ),
           ],
         ),

@@ -201,21 +201,23 @@ class _ReportExportCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Reports & Export',
-                        style: TextStyle(
+                        S.of(context).isVi ? 'Report & Xuất dữ liệu' : 'Reports & Export',
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'Export your trading performance as an image or PDF report.',
-                        style: TextStyle(
+                        S.of(context).isVi
+                            ? 'Xuất hiệu suất giao dịch thành ảnh hoặc báo cáo PDF.'
+                            : 'Export your trading performance as an image or PDF report.',
+                        style: const TextStyle(
                           color: Colors.black54,
                           height: 1.3,
                         ),
@@ -231,7 +233,7 @@ class _ReportExportCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onTap,
                 icon: const Icon(Icons.ios_share_outlined),
-                label: const Text('Export Report'),
+                label: Text(S.of(context).isVi ? 'Xuất report' : 'Export Report'),
               ),
             ),
           ],
