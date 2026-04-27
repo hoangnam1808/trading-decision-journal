@@ -6,7 +6,7 @@ import 'report_builder.dart';
 import 'report_options.dart';
 import 'report_preview_screen.dart';
 import 'package:provider/provider.dart';
-
+import '../l10n/strings.dart';
 import '../state/app_settings.dart';
 
 Future<void> showAnalystExportSheet(
@@ -42,21 +42,25 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
   ReportFormat _format = ReportFormat.image;
   bool _exporting = false;
 
-  String _formatLabel(ReportFormat format) {
+  String _formatLabel(ReportFormat format, bool isVi) {
     switch (format) {
       case ReportFormat.image:
-        return 'Image summary';
+        return isVi ? 'Ảnh tóm tắt' : 'Image summary';
       case ReportFormat.pdf:
-        return 'PDF report';
+        return isVi ? 'Báo cáo PDF' : 'PDF report';
     }
   }
 
-  String _formatSubtitle(ReportFormat format) {
+  String _formatSubtitle(ReportFormat format, bool isVi) {
     switch (format) {
       case ReportFormat.image:
-        return 'Share a clean performance card.';
+        return isVi
+            ? 'Chia sẻ nhanh một ảnh hiệu suất gọn đẹp.'
+            : 'Share a clean performance card.';
       case ReportFormat.pdf:
-        return 'Export a detailed performance report.';
+        return isVi
+            ? 'Xuất báo cáo hiệu suất chi tiết.'
+            : 'Export a detailed performance report.';
     }
   }
 
@@ -79,8 +83,12 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No trades in this analyst view.'),
+          SnackBar(
+            content: Text(
+              S.of(context).isVi
+                  ? 'Không có lệnh nào trong chế độ Analyst hiện tại.'
+                  : 'No trades in this analyst view.',
+            ),
           ),
         );
 
@@ -114,7 +122,11 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Export report failed: $e'),
+          content: Text(
+            S.of(context).isVi
+                ? 'Xuất report thất bại: $e'
+                : 'Export report failed: $e',
+          ),
         ),
       );
     } finally {
@@ -126,6 +138,7 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final s = S.of(context);
     final color = Theme.of(context).colorScheme.primary;
 
     return SafeArea(
@@ -141,10 +154,10 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
                   color: color,
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Export Analyst View',
-                    style: TextStyle(
+                    s.isVi ? 'Xuất chế độ Analyst' : 'Export Analyst View',
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                     ),
@@ -191,7 +204,7 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Format',
+                s.isVi ? 'Định dạng' : 'Format',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -202,8 +215,8 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
             _OptionTile(
               selected: _format == ReportFormat.image,
               icon: _formatIcon(ReportFormat.image),
-              title: _formatLabel(ReportFormat.image),
-              subtitle: _formatSubtitle(ReportFormat.image),
+              title: _formatLabel(ReportFormat.image, s.isVi),
+              subtitle: _formatSubtitle(ReportFormat.image, s.isVi),
               onTap: () {
                 setState(() => _format = ReportFormat.image);
               },
@@ -212,8 +225,8 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
             _OptionTile(
               selected: _format == ReportFormat.pdf,
               icon: _formatIcon(ReportFormat.pdf),
-              title: _formatLabel(ReportFormat.pdf),
-              subtitle: _formatSubtitle(ReportFormat.pdf),
+              title: _formatLabel(ReportFormat.pdf, s.isVi),
+              subtitle: _formatSubtitle(ReportFormat.pdf, s.isVi),
               onTap: () {
                 setState(() => _format = ReportFormat.pdf);
               },
@@ -232,7 +245,11 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
                     : const Icon(Icons.ios_share_outlined),
-                label: Text(_exporting ? 'Exporting...' : 'Export report'),
+                label: Text(
+                  _exporting
+                      ? (s.isVi ? 'Đang xuất...' : 'Exporting...')
+                      : (s.isVi ? 'Xuất report' : 'Export report'),
+                ),
               ),
             ),
           ],
