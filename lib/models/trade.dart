@@ -101,6 +101,7 @@ class Trade {
   final double entry;
   final double stopLoss;
   final double exit;
+  final double fee;
   final TradeChecklist checklist;
   final String? beforeImagePath;
   final String? afterImagePath;
@@ -115,6 +116,7 @@ class Trade {
     required this.entry,
     required this.stopLoss,
     required this.exit,
+    this.fee = 0.0,
     required this.checklist,
     this.beforeImagePath,
     this.afterImagePath,
@@ -146,6 +148,7 @@ class Trade {
       entry: entry,
       stopLoss: stopLoss,
       exit: exit,
+      fee: fee,
       checklist: checklist,
       beforeImagePath: beforeImagePath,
       afterImagePath: path,
@@ -163,6 +166,7 @@ class Trade {
       entry: entry,
       stopLoss: stopLoss,
       exit: exit,
+      fee: fee,
       checklist: checklist,
       beforeImagePath: path,
       afterImagePath: afterImagePath,
@@ -179,6 +183,7 @@ class Trade {
     'entry': entry,
     'stopLoss': stopLoss,
     'exit': exit,
+    'fee': fee,
     'checklist': checklist.toJson(),
     'beforeImagePath': beforeImagePath,
     'afterImagePath': afterImagePath,
@@ -195,6 +200,7 @@ class Trade {
       entry: (json['entry'] as num).toDouble(),
       stopLoss: (json['stopLoss'] as num).toDouble(),
       exit: (json['exit'] as num).toDouble(),
+      fee: (json['fee'] as num?)?.toDouble() ?? 0.0,
       checklist: TradeChecklist.fromJson(
         Map<String, dynamic>.from(json['checklist']),
       ),

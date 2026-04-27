@@ -256,6 +256,10 @@ class TradeDetailScreen extends StatelessWidget {
                   value: '${currentTrade.stopLoss}',
                 ),
                 _DetailStat(label: s.exit, value: '${currentTrade.exit}'),
+                _DetailStat(
+                  label: s.isVi ? 'Phí' : 'Fee',
+                  value: _feeText(currentTrade.fee),
+                ),
                 _DetailStat(label: s.grade, value: currentTrade.grade.label),
                 _DetailStat(
                   label: s.strategy,
@@ -393,7 +397,10 @@ class TradeDetailScreen extends StatelessWidget {
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
-
+String _feeText(double fee) {
+  if (fee.abs() < 0.005) return '0.00';
+  return fee.toStringAsFixed(2);
+}
 class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;

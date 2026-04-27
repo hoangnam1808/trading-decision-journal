@@ -47,6 +47,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   final _entryCtrl = TextEditingController();
   final _stopLossCtrl = TextEditingController();
   final _exitCtrl = TextEditingController();
+  final _feeCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
   String? _beforeImagePath;
@@ -75,6 +76,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _entryCtrl.text = t.entry.toString();
       _stopLossCtrl.text = t.stopLoss.toString();
       _exitCtrl.text = t.exit.toString();
+      _feeCtrl.text = t.fee == 0 ? '' : t.fee.toString();
       _noteCtrl.text = t.note ?? '';
 
       _beforeImagePath = t.beforeImagePath;
@@ -95,6 +97,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     _entryCtrl.dispose();
     _stopLossCtrl.dispose();
     _exitCtrl.dispose();
+    _feeCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
   }
@@ -167,7 +170,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   String _fmt2(int v) => v.toString().padLeft(2, '0');
 
   double? _parse(String text) => double.tryParse(text.trim());
-
+  double _parseOptionalFee() {
+    final text = _feeCtrl.text.trim();
+    if (text.isEmpty) return 0.0;
+    return double.tryParse(text) ?? 0.0;
+  }
   double? _previewR() {
     final entry = _parse(_entryCtrl.text);
     final sl = _parse(_stopLossCtrl.text);
@@ -197,6 +204,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       entry: double.parse(_entryCtrl.text.trim()),
       stopLoss: double.parse(_stopLossCtrl.text.trim()),
       exit: double.parse(_exitCtrl.text.trim()),
+      fee: _parseOptionalFee(),
       checklist: c,
       beforeImagePath: _beforeImagePath,
       afterImagePath: _afterImagePath,
@@ -235,6 +243,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _entryCtrl.clear();
         _stopLossCtrl.clear();
         _exitCtrl.clear();
+        _feeCtrl.clear();
         _noteCtrl.clear();
         _beforeImagePath = null;
         _afterImagePath = null;
@@ -526,6 +535,27 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
                       if (_parse(v ?? '') == null) return s.numberField;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _feeCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: s.isVi ? 'Phí giao dịch' : 'Fee',
+                      hintText: s.isVi
+                          ? 'Không bắt buộc: commission, funding, swap...'
+                          : 'Optional: commission, funding, swap...',
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (v) {
+                      final text = (v ?? '').trim();
+                      if (text.isEmpty) return null;
+                      if (_parse(text) == null) return s.numberField;
+                      if ((_parse(text) ?? 0) < 0) {
+                        return s.isVi ? 'Phí không được âm' : 'Fee cannot be negative';
+                      }
                       return null;
                     },
                   ),

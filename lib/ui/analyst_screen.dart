@@ -665,6 +665,22 @@ class _CalendarSection extends StatelessWidget {
   double _dayNetR(List<Trade> trades) {
     return trades.fold<double>(0, (sum, t) => sum + t.resultR);
   }
+  double _tradeMoney(Trade trade) {
+    return trade.resultR * cashPerR - trade.fee;
+  }
+
+  double _dayNetMoney(List<Trade> trades) {
+    return trades.fold<double>(0, (sum, t) => sum + _tradeMoney(t));
+  }
+
+  String _moneyText(double value) {
+    return '${value >= 0 ? '+' : ''}\$${value.toStringAsFixed(2)}';
+  }
+
+  String _calendarValueText(double value) {
+    if (moneyMode) return _moneyText(value);
+    return formatValue(value);
+  }
 
   Color _valueColor(double value) {
     if (value > 0) return Colors.green;
@@ -680,8 +696,13 @@ class _CalendarSection extends StatelessWidget {
     )
         .expand((e) => e.value)
         .toList();
-    final monthNet = _dayNetR(monthTrades);
-    final dayNet = _dayNetR(selectedTrades);
+    final monthNet = moneyMode
+        ? _dayNetMoney(monthTrades)
+        : _dayNetR(monthTrades);
+
+    final dayNet = moneyMode
+        ? _dayNetMoney(selectedTrades)
+        : _dayNetR(selectedTrades);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,7 +723,10 @@ class _CalendarSection extends StatelessWidget {
                 markerBuilder: (context, day, events) {
                   if (events.isEmpty) return const SizedBox.shrink();
 
-                  final net = _dayNetR(events.cast<Trade>());
+                  final dayTrades = events.cast<Trade>().toList();
+                  final net = moneyMode
+                      ? _dayNetMoney(dayTrades)
+                      : _dayNetR(dayTrades);
                   final positive = net >= 0;
 
                   return Align(
@@ -720,7 +744,7 @@ class _CalendarSection extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        formatValue(net),
+                        _calendarValueText(net),
                         style: TextStyle(
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
@@ -741,13 +765,13 @@ class _CalendarSection extends StatelessWidget {
           children: [
             _MetricCard(
               label: s.monthSummary,
-              value: formatValue(monthNet),
+              value: _calendarValueText(monthNet),
               icon: Icons.calendar_month_outlined,
               valueColor: _valueColor(monthNet),
             ),
             _MetricCard(
               label: s.selectedDayLabel,
-              value: formatValue(dayNet),
+              value: _calendarValueText(dayNet),
               icon: Icons.today_outlined,
               valueColor: _valueColor(dayNet),
             ),
@@ -765,7 +789,7 @@ class _CalendarSection extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${s.netValue}: ${formatValue(dayNet)} • ${s.tradesCount}: ${selectedTrades.length}',
+          '${s.netValue}: ${_calendarValueText(dayNet)} • ${s.tradesCount}: ${selectedTrades.length}',
           style: const TextStyle(color: Colors.black54),
         ),
         const SizedBox(height: 12),
@@ -797,12 +821,18 @@ class _CalendarSection extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text('${s.strategy}: ${t.strategy}'),
                           const SizedBox(height: 4),
-                          Text(
-                            '${s.netR}: ${moneyMode ? formatValue(t.resultR) : t.resultR.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _valueColor(t.resultR),
-                            ),
+                          Builder(
+                            builder: (_) {
+                              final tradeValue = moneyMode ? _tradeMoney(t) : t.resultR;
+
+                              return Text(
+                                '${s.netR}: ${moneyMode ? _moneyText(tradeValue) : t.resultR.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: _valueColor(tradeValue),
+                                ),
+                              );
+                            },
                           ),
                           if (t.note != null && t.note!.isNotEmpty) ...[
                             const SizedBox(height: 4),
