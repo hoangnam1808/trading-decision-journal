@@ -469,6 +469,30 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final strategyChipBg = isDark
+        ? colorScheme.surfaceContainerHighest.withOpacity(0.45)
+        : colorScheme.surfaceContainerHighest;
+
+    final strategyChipBorder = isDark
+        ? colorScheme.outline.withOpacity(0.35)
+        : colorScheme.outlineVariant;
+
+    final strategyChipText = colorScheme.onSurface;
+
+    final strategyChipSelectedBg = colorScheme.primary.withOpacity(
+      isDark ? 0.22 : 0.12,
+    );
+
+    final strategyChipSelectedBorder = colorScheme.primary.withOpacity(
+      isDark ? 0.45 : 0.30,
+    );
+
+    final strategyChipSelectedText = colorScheme.primary;
+
     final grade = classifyTrade(c);
     final previewR = _previewR();
     final gradeColor = _gradeColor(grade);
@@ -610,6 +634,24 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       return InputChip(
                         label: Text(strategy),
                         selected: selected,
+                        showCheckmark: false,
+                        backgroundColor: strategyChipBg,
+                        selectedColor: strategyChipSelectedBg,
+                        side: BorderSide(
+                          color: selected ? strategyChipSelectedBorder : strategyChipBorder,
+                          width: 1.2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                        labelStyle: theme.textTheme.bodyMedium?.copyWith(
+                          color: selected ? strategyChipSelectedText : strategyChipText,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        deleteIconColor: selected
+                            ? strategyChipSelectedText
+                            : colorScheme.onSurfaceVariant,
                         onPressed: () {
                           setState(() {
                             _strategyCtrl.text = strategy;
@@ -624,6 +666,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       );
                     }).toList(),
                   ),
+
                   const SizedBox(height: 10),
                   Align(
                     alignment: Alignment.centerLeft,
@@ -632,6 +675,19 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       icon: const Icon(Icons.add_rounded),
                       label: Text(
                         s.isVi ? 'Lưu quick pick' : 'Save quick pick',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        backgroundColor: colorScheme.primary.withOpacity(
+                          isDark ? 0.10 : 0.04,
+                        ),
+                        side: BorderSide(
+                          color: colorScheme.primary.withOpacity(0.34),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
                       ),
                     ),
                   ),
