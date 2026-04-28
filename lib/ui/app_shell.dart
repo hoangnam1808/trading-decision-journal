@@ -17,9 +17,15 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int idx = 0;
 
+  bool get _showAddFab {
+    return idx == 0 || idx == 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final pages = const [
       DashboardScreen(),
@@ -43,25 +49,32 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: _showAddFab
+          ? FloatingActionButton.extended(
+        heroTag: 'app_shell_add_trade_fab',
         onPressed: () => setState(() => idx = 2),
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: Text(s.addTradeFab),
-      ),
+      )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(12, 0, 12, 12),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Theme.of(context).navigationBarTheme.backgroundColor ??
-                Theme.of(context).cardColor,
-            border: Border.all(color: Colors.black12),
+            borderRadius: BorderRadius.circular(26),
+            color: theme.navigationBarTheme.backgroundColor ??
+                (isDark ? const Color(0xFF0F172A) : Colors.white),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : Colors.black.withOpacity(0.06),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: Colors.black.withOpacity(isDark ? 0.22 : 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -85,8 +98,8 @@ class _AppShellState extends State<AppShell> {
                 label: s.trades,
               ),
               NavigationDestination(
-                icon: const Icon(Icons.add_circle_outline),
-                selectedIcon: const Icon(Icons.add_circle),
+                icon: const Icon(Icons.add_circle_outline_rounded),
+                selectedIcon: const Icon(Icons.add_circle_rounded),
                 label: s.add,
               ),
               NavigationDestination(
@@ -95,8 +108,8 @@ class _AppShellState extends State<AppShell> {
                 label: s.analyst,
               ),
               NavigationDestination(
-                icon: const Icon(Icons.person_outline),
-                selectedIcon: const Icon(Icons.person),
+                icon: const Icon(Icons.person_outline_rounded),
+                selectedIcon: const Icon(Icons.person_rounded),
                 label: s.profile,
               ),
             ],

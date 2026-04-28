@@ -5,6 +5,7 @@ import '../l10n/strings.dart';
 import '../state/app_settings.dart';
 import '../reports/export_report_sheet.dart';
 import 'request_review_card.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -31,29 +32,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<AppSettings>();
     final s = S.of(context);
+    final theme = Theme.of(context);
 
     final currentText = settings.cashPerR.toStringAsFixed(
       settings.cashPerR % 1 == 0 ? 0 : 2,
     );
+
     if (_cashPerRCtrl.text != currentText) {
       _cashPerRCtrl.text = currentText;
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
       children: [
-        Text(
-          s.settings,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+        _ProfileHeader(
+          title: s.settings,
+          subtitle: s.isVi
+              ? 'Tùy chỉnh ngôn ngữ, giao diện và cấu hình report.'
+              : 'Customize language, appearance, and report settings.',
         ),
         const SizedBox(height: 16),
 
-        Card(
-          child: ListTile(
-            title: Text(s.language),
-            subtitle: Text(settings.lang.label),
-            trailing: DropdownButton<AppLang>(
+        _SettingsTile(
+          icon: Icons.language_rounded,
+          title: s.language,
+          subtitle: settings.lang.label,
+          trailing: DropdownButtonHideUnderline(
+            child: DropdownButton<AppLang>(
               value: settings.lang,
+              borderRadius: BorderRadius.circular(18),
               items: [
                 DropdownMenuItem(
                   value: AppLang.en,
@@ -75,18 +82,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         const SizedBox(height: 12),
 
-        Card(
-          child: ListTile(
-            title: Text(s.theme),
-            subtitle: Text(
-              switch (settings.themeMode) {
-                ThemeMode.system => s.system,
-                ThemeMode.light => s.light,
-                ThemeMode.dark => s.dark,
-              },
-            ),
-            trailing: DropdownButton<ThemeMode>(
+        _SettingsTile(
+          icon: Icons.dark_mode_rounded,
+          title: s.theme,
+          subtitle: switch (settings.themeMode) {
+            ThemeMode.system => s.system,
+            ThemeMode.light => s.light,
+            ThemeMode.dark => s.dark,
+          },
+          trailing: DropdownButtonHideUnderline(
+            child: DropdownButton<ThemeMode>(
               value: settings.themeMode,
+              borderRadius: BorderRadius.circular(18),
               items: [
                 DropdownMenuItem(
                   value: ThemeMode.system,
@@ -112,67 +119,294 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         const SizedBox(height: 12),
 
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  s.defaultCashPerR,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
+        _ProCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CardTitleRow(
+                icon: Icons.attach_money_rounded,
+                title: s.defaultCashPerR,
+                subtitle: s.isVi
+                    ? 'Dùng để quy đổi R sang tiền trong lịch và report.'
+                    : 'Used to convert R into money in calendar and reports.',
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _cashPerRCtrl,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _cashPerRCtrl,
-                  keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: s.cashPerR,
-                    hintText: s.cashPerRHint,
-                    border: const OutlineInputBorder(),
-                  ),
+                decoration: InputDecoration(
+                  labelText: s.cashPerR,
+                  hintText: s.cashPerRHint,
                 ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton(
-                    onPressed: () async {
-                      final value =
-                      double.tryParse(_cashPerRCtrl.text.trim());
-                      if (value == null || value <= 0) return;
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final value = double.tryParse(_cashPerRCtrl.text.trim());
+                    if (value == null || value <= 0) return;
 
-                      await context.read<AppSettings>().setCashPerR(value);
+                    await context.read<AppSettings>().setCashPerR(value);
 
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(s.cashPerRSaved)),
-                      );
-                    },
-                    child: Text(s.saveTrade),
-                  ),
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(s.cashPerRSaved)),
+                    );
+                  },
+                  icon: const Icon(Icons.save_rounded),
+                  label: Text(s.save),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+
+        const SizedBox(height: 12),
+
         _ReportExportCard(
           onTap: () => showExportReportSheet(context),
         ),
-        const SizedBox(height: 16),
-        const RequestReviewCard(),
-        const SizedBox(height: 16),
 
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(s.disclaimer),
+        const SizedBox(height: 12),
+
+        const RequestReviewCard(),
+
+        const SizedBox(height: 12),
+
+        _ProCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  s.disclaimer,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 }
+
+class _ProfileHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _ProfileHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            height: 1.35,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _ProCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.06),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _ProCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      child: Row(
+        children: [
+          _IconBubble(icon: icon),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          trailing,
+        ],
+      ),
+    );
+  }
+}
+
+class _CardTitleRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _CardTitleRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _IconBubble(icon: icon),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _IconBubble extends StatelessWidget {
+  final IconData icon;
+
+  const _IconBubble({
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: primary.withOpacity(0.11),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: primary.withOpacity(0.18),
+        ),
+      ),
+      child: Icon(
+        icon,
+        color: primary,
+        size: 22,
+      ),
+    );
+  }
+}
+
 class _ReportExportCard extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -182,62 +416,42 @@ class _ReportExportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final s = S.of(context);
+    final theme = Theme.of(context);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: primary.withOpacity(0.10),
-                  child: Icon(
-                    Icons.assessment_outlined,
-                    color: primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        S.of(context).isVi ? 'Report & Xuất dữ liệu' : 'Reports & Export',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        S.of(context).isVi
-                            ? 'Xuất hiệu suất giao dịch thành ảnh hoặc báo cáo PDF.'
-                            : 'Export your trading performance as an image or PDF report.',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return _ProCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardTitleRow(
+            icon: Icons.assessment_rounded,
+            title: s.isVi ? 'Report & Xuất dữ liệu' : 'Reports & Export',
+            subtitle: s.isVi
+                ? 'Xuất hiệu suất giao dịch thành ảnh hoặc báo cáo PDF.'
+                : 'Export your trading performance as an image or PDF report.',
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.ios_share_rounded),
+              label: Text(s.isVi ? 'Xuất report' : 'Export Report'),
             ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onTap,
-                icon: const Icon(Icons.ios_share_outlined),
-                label: Text(S.of(context).isVi ? 'Xuất report' : 'Export Report'),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            s.isVi
+                ? 'Hỗ trợ export theo kỳ lọc, tháng, năm hoặc khoảng thời gian tùy chỉnh.'
+                : 'Supports current filter, monthly, yearly, or custom date range exports.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
