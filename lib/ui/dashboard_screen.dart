@@ -44,6 +44,7 @@ class DashboardScreen extends StatelessWidget {
         title: s.dashboard,
         tagline: s.dashboardTagline,
         message: '${s.noTradesYet}\n${s.addFirstTradeToSeeStats}',
+        isVi: s.isVi,
       );
     }
 
@@ -730,16 +731,19 @@ class _EmptyDashboardState extends StatelessWidget {
   final String title;
   final String tagline;
   final String message;
+  final bool isVi;
 
   const _EmptyDashboardState({
     required this.title,
     required this.tagline,
     required this.message,
+    required this.isVi,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
 
     return Center(
       child: Padding(
@@ -753,13 +757,13 @@ class _EmptyDashboardState extends StatelessWidget {
                 width: 68,
                 height: 68,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.10),
+                  color: primary.withOpacity(0.10),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.insights_rounded,
                   size: 34,
-                  color: theme.colorScheme.primary,
+                  color: primary,
                 ),
               ),
               const SizedBox(height: 16),
@@ -789,6 +793,31 @@ class _EmptyDashboardState extends StatelessWidget {
                   color: theme.colorScheme.onSurface,
                   height: 1.4,
                   fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  color: primary.withOpacity(0.08),
+                  border: Border.all(
+                    color: primary.withOpacity(0.18),
+                  ),
+                ),
+                child: Text(
+                  isVi
+                      ? 'Làm bởi trader, dành cho trader.'
+                      : 'Built by a trader, for traders.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: primary,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.1,
+                  ),
                 ),
               ),
             ],
