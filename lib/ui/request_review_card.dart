@@ -1,6 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../l10n/strings.dart';
 import '../models/trade.dart';
@@ -29,7 +34,9 @@ class RequestReviewCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SheetHeader(
-                  title: s.isVi ? 'Yêu cầu review journal' : 'Request Journal Review',
+                  title: s.isVi
+                      ? 'Yêu cầu review journal'
+                      : 'Request Journal Review',
                   subtitle: s.isVi
                       ? 'Review thủ công bởi Trading Performance Analyst. Có thể dùng dữ liệu trong app hoặc journal bên ngoài.'
                       : 'Manual review by a Trading Performance Analyst. You can use app data or an external journal.',
@@ -53,10 +60,22 @@ class RequestReviewCard extends StatelessWidget {
 
                 _InfoCard(
                   icon: Icons.upload_file_rounded,
-                  title: s.isVi ? 'Bạn có thể gửi journal từ nguồn khác' : 'External journals are accepted',
+                  title: s.isVi
+                      ? 'Bạn có thể gửi journal từ nguồn khác'
+                      : 'External journals are accepted',
                   body: s.isVi
                       ? 'Bạn có thể gửi Excel, Google Sheet, CSV, ảnh chart trước/sau lệnh, lịch sử MT4/MT5, Binance, TradingView, Notion hoặc Google Doc.'
                       : 'You can send Excel, Google Sheet, CSV, before/after chart screenshots, MT4/MT5 history, Binance, TradingView, Notion, or Google Doc.',
+                ),
+
+                const SizedBox(height: 12),
+
+                _InfoCard(
+                  icon: Icons.inventory_2_rounded,
+                  title: s.isVi ? 'Gói dữ liệu review' : 'Review package',
+                  body: s.isVi
+                      ? 'Bạn có thể xuất gói dữ liệu review để gửi analyst, kể cả khi chưa dùng Pro. Gói này chỉ chứa dữ liệu từng lệnh cần thiết cho review thủ công và không bao gồm báo cáo Analyst nâng cao.'
+                      : 'You can export a review package for the analyst even without Pro. This package only includes trade-level data needed for manual review and does not include advanced Analyst reports.',
                 ),
 
                 const SizedBox(height: 12),
@@ -77,7 +96,9 @@ class RequestReviewCard extends StatelessWidget {
 
                 _ActionButton(
                   icon: Icons.content_copy_rounded,
-                  label: s.isVi ? 'Copy nội dung yêu cầu review' : 'Copy request message',
+                  label: s.isVi
+                      ? 'Copy nội dung yêu cầu review'
+                      : 'Copy request message',
                   onPressed: () {
                     _copyRequestMessage(
                       parentContext: parentContext,
@@ -89,11 +110,29 @@ class RequestReviewCard extends StatelessWidget {
                 const SizedBox(height: 10),
 
                 _ActionButton(
+                  icon: Icons.inventory_2_rounded,
+                  label: s.isVi
+                      ? 'Xuất gói dữ liệu review'
+                      : 'Export review package',
+                  onPressed: () {
+                    _exportReviewPackage(
+                      parentContext: parentContext,
+                      trades: trades,
+                      isVi: s.isVi,
+                    );
+                  },
+                  filled: false,
+                ),
+                const SizedBox(height: 10),
+
+                _ActionButton(
                   icon: Icons.ios_share_rounded,
                   label: s.isVi ? 'Xuất report từ app' : 'Export app report',
                   onPressed: () async {
                     Navigator.of(sheetContext).pop();
-                    await Future<void>.delayed(const Duration(milliseconds: 180));
+                    await Future<void>.delayed(
+                      const Duration(milliseconds: 180),
+                    );
 
                     if (!parentContext.mounted) return;
                     showExportReportSheet(parentContext);
@@ -103,7 +142,8 @@ class RequestReviewCard extends StatelessWidget {
 
                 _ActionButton(
                   icon: Icons.alternate_email_rounded,
-                  label: s.isVi ? 'Copy thông tin liên hệ' : 'Copy contact info',
+                  label:
+                  s.isVi ? 'Copy thông tin liên hệ' : 'Copy contact info',
                   onPressed: () {
                     _copyContactInfo(
                       parentContext: parentContext,
@@ -120,7 +160,9 @@ class RequestReviewCard extends StatelessWidget {
                       ? 'Đây là dịch vụ review journal thủ công, không phải tín hiệu giao dịch hay lời khuyên tài chính. Không đảm bảo lợi nhuận.'
                       : 'This is a manual journal review service, not trading signals or financial advice. No profit is guaranteed.',
                   style: Theme.of(sheetContext).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                    color: Theme.of(sheetContext)
+                        .colorScheme
+                        .onSurfaceVariant,
                     height: 1.4,
                     fontWeight: FontWeight.w600,
                   ),
@@ -148,8 +190,17 @@ Winrate: ${stats.winrate.toStringAsFixed(1)}%
 Phân loại: A ${stats.aCount}, A- ${stats.aMinusCount}, B ${stats.bCount}
 Tỷ lệ lệnh B: ${stats.bRatio.toStringAsFixed(1)}%
 
-Tôi có thể gửi thêm journal từ nguồn khác nếu cần:
-Excel / Google Sheet / CSV / ảnh chart / MT4-MT5 / Binance / TradingView / Notion / Google Doc.
+Dữ liệu tôi có thể gửi:
+- Nếu dùng dữ liệu trong app: tôi sẽ gửi kèm gói dữ liệu review từ Decision Journal.
+- Gói này chứa dữ liệu từng lệnh cần thiết cho review thủ công.
+- Tôi cũng có thể gửi thêm PDF/ảnh report tổng quan từ app nếu cần.
+- Nếu có journal bên ngoài: tôi có thể gửi Excel / Google Sheet / CSV / ảnh chart / MT4-MT5 / Binance / TradingView / Notion / Google Doc.
+
+Để review tốt hơn, tôi có thể cung cấp thêm:
+- Ảnh chart trước/sau lệnh nếu có
+- Lý do vào lệnh
+- Ghi chú tâm lý hoặc lỗi kỷ luật
+- Quy tắc risk management tôi đang dùng
 
 Mục tiêu review:
 - Kiểm tra chất lượng quyết định
@@ -160,7 +211,7 @@ Mục tiêu review:
 
 Tôi hiểu rằng nếu số mẫu còn ít, kết luận về expectancy sẽ chỉ mang tính tham khảo.
 
-Vui lòng báo phạm vi review, giá cuối cùng và phương thức thanh toán phù hợp.
+Vui lòng xác nhận gói review phù hợp và phương thức thanh toán.
 '''
         : '''
 I would like to request a trading journal review.
@@ -171,8 +222,17 @@ Winrate: ${stats.winrate.toStringAsFixed(1)}%
 Breakdown: A ${stats.aCount}, A- ${stats.aMinusCount}, B ${stats.bCount}
 B-trade ratio: ${stats.bRatio.toStringAsFixed(1)}%
 
-I can also provide an external journal source if needed:
-Excel / Google Sheet / CSV / chart screenshots / MT4-MT5 / Binance / TradingView / Notion / Google Doc.
+Data I can provide:
+- If using app data: I will attach the Decision Journal review package.
+- This package contains trade-level data needed for manual review.
+- I can also include a PDF/image summary report from the app if needed.
+- If using an external journal: I can send Excel / Google Sheet / CSV / chart screenshots / MT4-MT5 / Binance / TradingView / Notion / Google Doc.
+
+To make the review more useful, I can also provide:
+- Before/after chart screenshots if available
+- Trade entry reasons
+- Psychology or discipline notes
+- My current risk-management rules
 
 Review goals:
 - Check decision quality
@@ -183,7 +243,7 @@ Review goals:
 
 I understand that if the sample size is small, expectancy conclusions will be limited.
 
-Please confirm the review scope, final price, and available payment method.
+Please confirm the suitable review package and available payment method.
 ''';
 
     await Clipboard.setData(ClipboardData(text: message.trim()));
@@ -192,7 +252,9 @@ Please confirm the review scope, final price, and available payment method.
     ScaffoldMessenger.of(parentContext).showSnackBar(
       SnackBar(
         content: Text(
-          isVi ? 'Đã copy nội dung yêu cầu review.' : 'Review request message copied.',
+          isVi
+              ? 'Đã copy nội dung yêu cầu review.'
+              : 'Review request message copied.',
         ),
       ),
     );
@@ -226,6 +288,142 @@ Available options may include bank transfer, international transfer, or crypto b
         ),
       ),
     );
+  }
+
+  Future<void> _exportReviewPackage({
+    required BuildContext parentContext,
+    required List<Trade> trades,
+    required bool isVi,
+  }) async {
+    if (trades.isEmpty) {
+      if (!parentContext.mounted) return;
+
+      ScaffoldMessenger.of(parentContext).showSnackBar(
+        SnackBar(
+          content: Text(
+            isVi
+                ? 'Chưa có lệnh nào để xuất gói review.'
+                : 'No trades to export as a review package.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final stats = _ReviewStats.fromTrades(trades);
+
+      final data = {
+        'package_type': 'decision_journal_review_package',
+        'package_version': 1,
+        'exported_at': DateTime.now().toIso8601String(),
+        'privacy_note': isVi
+            ? 'Gói này được tạo khi user chủ động export để gửi review thủ công.'
+            : 'This package was created only when the user manually exported it for manual review.',
+        'contains_advanced_analyst_report': false,
+        'contains_full_pro_export': false,
+        'summary': {
+          'total_trades': stats.totalTrades,
+          'net_r': double.parse(stats.netR.toStringAsFixed(2)),
+          'winrate_percent': double.parse(stats.winrate.toStringAsFixed(1)),
+          'a_count': stats.aCount,
+          'a_minus_count': stats.aMinusCount,
+          'b_count': stats.bCount,
+          'b_ratio_percent': double.parse(stats.bRatio.toStringAsFixed(1)),
+        },
+        'trades': trades.asMap().entries.map((entry) {
+          final index = entry.key;
+          final t = entry.value;
+
+          return {
+            'index': index + 1,
+            'date_time': t.dateTime.toIso8601String(),
+            'market': t.market.label,
+            'strategy': t.strategy,
+            'symbol': t.symbol,
+            'direction': t.direction.label,
+            'entry': t.entry,
+            'stop_loss': t.stopLoss,
+            'exit': t.exit,
+            'result_r': double.parse(t.resultR.toStringAsFixed(2)),
+            'fee': double.parse(t.fee.toStringAsFixed(2)),
+            'grade': t.grade.label,
+            'checklist': {
+              'context_ok': t.checklist.contextOk,
+              'entry_zone_ok': t.checklist.entryZoneOk,
+              'execution_ok': t.checklist.executionOk,
+              'risk_ok': t.checklist.riskOk,
+              'emotional_discipline_ok': !t.checklist.emotional,
+            },
+            'charts': {
+              'has_before_chart': t.beforeImagePath?.isNotEmpty ?? false,
+              'has_after_chart': t.afterImagePath?.isNotEmpty ?? false,
+              'before_chart_file_name': _safeFileName(t.beforeImagePath),
+              'after_chart_file_name': _safeFileName(t.afterImagePath),
+            },
+            'note': t.note ?? '',
+          };
+        }).toList(),
+      };
+
+      final dir = await getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'decision_journal_review_$timestamp.djreview';
+      final packageFile = File('${dir.path}/$fileName');
+
+      const encoder = JsonEncoder.withIndent('  ');
+      await packageFile.writeAsString(
+        encoder.convert(data),
+        flush: true,
+      );
+
+      final files = <XFile>[
+        XFile(
+          packageFile.path,
+          mimeType: 'application/json',
+          name: fileName,
+        ),
+      ];
+
+      for (final t in trades) {
+        final beforePath = t.beforeImagePath;
+        final afterPath = t.afterImagePath;
+
+        if (beforePath != null && beforePath.isNotEmpty) {
+          final file = File(beforePath);
+          if (await file.exists()) {
+            files.add(XFile(file.path));
+          }
+        }
+
+        if (afterPath != null && afterPath.isNotEmpty) {
+          final file = File(afterPath);
+          if (await file.exists()) {
+            files.add(XFile(file.path));
+          }
+        }
+      }
+
+      await Share.shareXFiles(
+        files,
+        subject: 'Decision Journal Review Package',
+        text: isVi
+            ? 'Gói dữ liệu review từ Decision Journal. File .djreview chứa dữ liệu từng lệnh; ảnh chart được gửi kèm nếu có.'
+            : 'Review package from Decision Journal. The .djreview file contains trade-level data; chart images are attached if available.',
+      );
+    } catch (e) {
+      if (!parentContext.mounted) return;
+
+      ScaffoldMessenger.of(parentContext).showSnackBar(
+        SnackBar(
+          content: Text(
+            isVi
+                ? 'Xuất gói review thất bại: $e'
+                : 'Review package export failed: $e',
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -281,7 +479,6 @@ Available options may include bank transfer, international transfer, or crypto b
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: () => _showReviewSheet(
@@ -340,6 +537,16 @@ class _ReviewStats {
 String _signedR(double value) {
   final sign = value > 0 ? '+' : '';
   return '$sign${value.toStringAsFixed(2)}R';
+}
+
+String? _safeFileName(String? path) {
+  if (path == null || path.trim().isEmpty) return null;
+
+  final normalized = path.replaceAll('\\', '/');
+  final parts = normalized.split('/');
+  if (parts.isEmpty) return null;
+
+  return parts.last;
 }
 
 class _SheetHeader extends StatelessWidget {
@@ -402,6 +609,7 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isEarly ? Colors.orange : Colors.green;
+    final theme = Theme.of(context);
 
     return _SoftBox(
       borderColor: color.withOpacity(0.22),
@@ -416,13 +624,17 @@ class _StatusCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              isVi
-                  ? 'Review journal thủ công bởi Trading Performance Analyst. Tập trung vào chất lượng quyết định, setup A/A-/B, risk management và lỗi cảm xúc — không phải tín hiệu giao dịch.'
-                  : 'Manual journal review by a Trading Performance Analyst. Focused on decision quality, A/A-/B setup classification, risk management, and emotional mistakes — not trading signals.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                height: 1.45,
-                fontWeight: FontWeight.w600,
+              isEarly
+                  ? (isVi
+                  ? 'Early Review khả dụng. Bạn hiện có $tradesCount lệnh trong app. Nếu đã có journal ở nơi khác, bạn vẫn có thể gửi file/ảnh/link để review.'
+                  : 'Early Review available. You currently have $tradesCount trades in the app. If you track elsewhere, you can still send files, screenshots, or links.')
+                  : (isVi
+                  ? 'Sẵn sàng Journal Review. Bạn hiện có $tradesCount lệnh trong app.'
+                  : 'Ready for Journal Review. You currently have $tradesCount trades in the app.'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -448,11 +660,23 @@ class _StatsCard extends StatelessWidget {
         spacing: 8,
         runSpacing: 8,
         children: [
-          _StatChip(label: isVi ? 'Lệnh' : 'Trades', value: '${stats.totalTrades}'),
+          _StatChip(
+            label: isVi ? 'Lệnh' : 'Trades',
+            value: '${stats.totalTrades}',
+          ),
           _StatChip(label: 'Net R', value: _signedR(stats.netR)),
-          _StatChip(label: 'Winrate', value: '${stats.winrate.toStringAsFixed(1)}%'),
-          _StatChip(label: 'A/A-/B', value: '${stats.aCount}/${stats.aMinusCount}/${stats.bCount}'),
-          _StatChip(label: isVi ? 'B trade' : 'B ratio', value: '${stats.bRatio.toStringAsFixed(1)}%'),
+          _StatChip(
+            label: 'Winrate',
+            value: '${stats.winrate.toStringAsFixed(1)}%',
+          ),
+          _StatChip(
+            label: 'A/A-/B',
+            value: '${stats.aCount}/${stats.aMinusCount}/${stats.bCount}',
+          ),
+          _StatChip(
+            label: isVi ? 'B trade' : 'B ratio',
+            value: '${stats.bRatio.toStringAsFixed(1)}%',
+          ),
         ],
       ),
     );
@@ -474,12 +698,12 @@ class _PricingCard extends StatelessWidget {
         children: [
           _InfoTitle(
             icon: Icons.payments_rounded,
-            title: isVi ? 'Giá review dự kiến' : 'Estimated pricing',
+            title: isVi ? 'Giá review cố định' : 'Fixed review pricing',
           ),
           const SizedBox(height: 12),
           _PriceRow(
             title: 'Early Review',
-            price: 'from \$19',
+            price: isVi ? 'chỉ \$19' : 'only \$19',
             subtitle: isVi
                 ? 'Dưới 30 lệnh hoặc journal còn ít mẫu.'
                 : 'Fewer than 30 trades or early-stage journal.',
@@ -487,7 +711,7 @@ class _PricingCard extends StatelessWidget {
           const SizedBox(height: 10),
           _PriceRow(
             title: 'Journal Review',
-            price: 'from \$49',
+            price: isVi ? 'chỉ \$49' : 'only \$49',
             subtitle: isVi
                 ? 'Khuyến nghị 30–50 lệnh để review ổn định hơn.'
                 : '30–50 trades recommended for a more reliable review.',
@@ -495,7 +719,7 @@ class _PricingCard extends StatelessWidget {
           const SizedBox(height: 10),
           _PriceRow(
             title: 'Deep Review',
-            price: 'from \$99',
+            price: isVi ? 'chỉ \$99' : 'only \$99',
             subtitle: isVi
                 ? 'Journal nhiều dữ liệu, ảnh chart hoặc cần report sâu.'
                 : 'More data, chart screenshots, or deeper written report.',
@@ -503,8 +727,8 @@ class _PricingCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             isVi
-                ? 'Giá cuối cùng tùy vào số lượng lệnh, ảnh chart và độ sâu review. Phương thức thanh toán sẽ được xác nhận sau khi thống nhất phạm vi review. Có thể hỗ trợ chuyển khoản ngân hàng, thanh toán quốc tế hoặc crypto theo thỏa thuận.'
-                : 'Final pricing depends on sample size, chart screenshots, and review depth. Payment method will be confirmed after the review scope is agreed. Available options may include bank transfer, international transfer, or crypto by agreement.',
+                ? 'Chọn gói review phù hợp với số lượng lệnh và độ sâu bạn cần. Phương thức thanh toán sẽ được xác nhận sau khi thống nhất phạm vi review. Có thể hỗ trợ chuyển khoản ngân hàng, thanh toán quốc tế hoặc crypto theo thỏa thuận.'
+                : 'Choose the review package that matches your journal size and review depth. Payment method will be confirmed after the review scope is agreed. Available options may include bank transfer, international transfer, or crypto by agreement.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               height: 1.4,
@@ -682,8 +906,6 @@ class _ActionButton extends StatelessWidget {
     );
   }
 }
-
-
 
 class _StatChip extends StatelessWidget {
   final String label;

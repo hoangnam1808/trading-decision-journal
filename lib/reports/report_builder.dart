@@ -6,6 +6,7 @@ class ReportBuilder {
     required List<Trade> trades,
     required String periodLabel,
     required double cashPerR,
+    required bool isVi,
   }) {
     final sortedTrades = [...trades]
       ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
@@ -23,6 +24,7 @@ class ReportBuilder {
 
     final equityCurve = _buildEquityCurve(sortedTrades);
     final maxDrawdown = _maxDrawdown(equityCurve);
+
     final totalFees = sortedTrades.fold<double>(
       0,
           (sum, trade) => sum + trade.fee,
@@ -34,7 +36,8 @@ class ReportBuilder {
     );
 
     return ReportData(
-      title: 'Decision Journal Report',
+      isVi: isVi,
+      title: isVi ? 'Báo cáo Decision Journal' : 'Decision Journal Report',
       periodLabel: periodLabel,
       generatedAt: DateTime.now(),
       trades: sortedTrades,
@@ -47,8 +50,12 @@ class ReportBuilder {
       netMoney: netMoney,
       equityCurve: equityCurve,
       gradeBreakdown: _buildGradeBreakdown(sortedTrades),
-      strategyBreakdown: _buildStrategyBreakdown(sortedTrades),
+      strategyBreakdown: _buildStrategyBreakdown(
+        sortedTrades,
+        isVi: isVi,
+      ),
       insights: _buildInsights(
+        isVi: isVi,
         totalTrades: totalTrades,
         netR: netR,
         avgR: avgR,
@@ -119,12 +126,15 @@ class ReportBuilder {
     ];
   }
 
-  static List<StrategyReportData> _buildStrategyBreakdown(List<Trade> trades) {
+  static List<StrategyReportData> _buildStrategyBreakdown(
+      List<Trade> trades, {
+        required bool isVi,
+      }) {
     final map = <String, List<Trade>>{};
 
     for (final trade in trades) {
       final strategy = trade.strategy.trim().isEmpty
-          ? 'No strategy'
+          ? (isVi ? 'Chưa có chiến lược' : 'No strategy')
           : trade.strategy.trim();
 
       map.putIfAbsent(strategy, () => []).add(trade);
@@ -159,6 +169,7 @@ class ReportBuilder {
   }
 
   static List<String> _buildInsights({
+    required bool isVi,
     required int totalTrades,
     required double netR,
     required double avgR,
@@ -167,7 +178,12 @@ class ReportBuilder {
     required List<Trade> trades,
   }) {
     if (totalTrades == 0) {
-      return [
+      return isVi
+          ? [
+        'Chưa có lệnh nào trong giai đoạn này.',
+        'Hãy thêm nhiều lệnh hơn để tạo nhận định có ý nghĩa.',
+      ]
+          : [
         'No trades in this period yet.',
         'Add more trades to generate meaningful insights.',
       ];
@@ -179,29 +195,65 @@ class ReportBuilder {
     final insights = <String>[];
 
     if (netR > 0) {
-      insights.add('Positive performance in this period.');
+      insights.add(
+        isVi
+            ? 'Hiệu suất đang dương trong giai đoạn này.'
+            : 'Positive performance in this period.',
+      );
     } else if (netR < 0) {
-      insights.add('Negative performance in this period.');
+      insights.add(
+        isVi
+            ? 'Hiệu suất đang âm trong giai đoạn này.'
+            : 'Negative performance in this period.',
+      );
     } else {
-      insights.add('Flat performance in this period.');
+      insights.add(
+        isVi
+            ? 'Hiệu suất đang đi ngang trong giai đoạn này.'
+            : 'Flat performance in this period.',
+      );
     }
 
     if (avgR > 0) {
-      insights.add('Average R is positive, showing good trade expectancy.');
+      insights.add(
+        isVi
+            ? 'Avg R đang dương, cho thấy chất lượng lệnh tương đối tốt.'
+            : 'Average R is positive, showing good trade expectancy.',
+      );
     } else {
-      insights.add('Average R is not positive yet. Review entry quality and risk.');
+      insights.add(
+        isVi
+            ? 'Avg R chưa dương. Nên xem lại chất lượng điểm vào và quản trị rủi ro.'
+            : 'Average R is not positive yet. Review entry quality and risk.',
+      );
     }
 
     if (bRatio > 25) {
-      insights.add('B trades are high. Reducing low-quality trades may improve results.');
+      insights.add(
+        isVi
+            ? 'Tỷ lệ lệnh B đang cao. Giảm lệnh chất lượng thấp có thể cải thiện kết quả.'
+            : 'B trades are high. Reducing low-quality trades may improve results.',
+      );
     } else {
-      insights.add('B trade ratio is under control.');
+      insights.add(
+        isVi
+            ? 'Tỷ lệ lệnh B đang trong tầm kiểm soát.'
+            : 'B trade ratio is under control.',
+      );
     }
 
     if (maxDrawdown > 3) {
-      insights.add('Drawdown is meaningful. Consider reducing size after losing streaks.');
+      insights.add(
+        isVi
+            ? 'Drawdown đáng chú ý. Có thể cân nhắc giảm size sau chuỗi thua.'
+            : 'Drawdown is meaningful. Consider reducing size after losing streaks.',
+      );
     } else {
-      insights.add('Drawdown is relatively controlled.');
+      insights.add(
+        isVi
+            ? 'Drawdown hiện tương đối được kiểm soát.'
+            : 'Drawdown is relatively controlled.',
+      );
     }
 
     return insights.take(3).toList();

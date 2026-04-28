@@ -117,6 +117,7 @@ class _AnalystExportSheetState extends State<AnalystExportSheet> {
         trades: widget.trades,
         periodLabel: widget.contextLabel,
         cashPerR: settings.cashPerR,
+        isVi: s.isVi,
       );
 
       final selectedFormat = _format;

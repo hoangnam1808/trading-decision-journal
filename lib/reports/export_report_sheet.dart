@@ -213,6 +213,7 @@ class _ExportReportSheetState extends State<ExportReportSheet> {
         trades: trades,
         periodLabel: _reportPeriodLabel(context),
         cashPerR: settings.cashPerR,
+        isVi: s.isVi,
       );
 
       final selectedFormat = _format;

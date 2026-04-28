@@ -31,6 +31,8 @@ class StrategyReportData {
 }
 
 class ReportData {
+  final bool isVi;
+
   final String title;
   final String periodLabel;
   final DateTime generatedAt;
@@ -52,6 +54,7 @@ class ReportData {
   final List<String> insights;
 
   const ReportData({
+    required this.isVi,
     required this.title,
     required this.periodLabel,
     required this.generatedAt,

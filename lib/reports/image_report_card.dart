@@ -40,7 +40,7 @@ class ImageReportCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _Header(
-              periodLabel: data.periodLabel,
+              data: data,
               generatedText: generatedText,
             ),
             const SizedBox(height: 30),
@@ -57,7 +57,7 @@ class ImageReportCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 30),
-            const _Footer(),
+            _Footer(isVi: data.isVi),
           ],
         ),
       ),
@@ -66,11 +66,11 @@ class ImageReportCard extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  final String periodLabel;
+  final ReportData data;
   final String generatedText;
 
   const _Header({
-    required this.periodLabel,
+    required this.data,
     required this.generatedText,
   });
 
@@ -99,9 +99,9 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Decision Journal Report',
-                style: TextStyle(
+              Text(
+                data.title,
+                style: const TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFF0F172A),
@@ -115,12 +115,14 @@ class _Header extends StatelessWidget {
                 children: [
                   _SmallPill(
                     icon: Icons.date_range_outlined,
-                    text: periodLabel,
+                    text: data.periodLabel,
                     color: primary,
                   ),
                   _SmallPill(
                     icon: Icons.schedule_outlined,
-                    text: generatedText,
+                    text: data.isVi
+                        ? 'Tạo lúc $generatedText'
+                        : 'Generated $generatedText',
                     color: const Color(0xFF64748B),
                   ),
                 ],
@@ -150,10 +152,10 @@ class _EquityCurveSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Equity Curve (R)',
-                  style: TextStyle(
+                  data.isVi ? 'Đường Equity (R)' : 'Equity Curve (R)',
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
                     color: Color(0xFF0F172A),
@@ -162,7 +164,8 @@ class _EquityCurveSection extends StatelessWidget {
               ),
               _SmallPill(
                 icon: Icons.trending_up,
-                text: '${data.netR >= 0 ? '+' : ''}${data.netR.toStringAsFixed(2)}R',
+                text:
+                '${data.netR >= 0 ? '+' : ''}${data.netR.toStringAsFixed(2)}R',
                 color: data.netR >= 0
                     ? const Color(0xFF16A34A)
                     : const Color(0xFFDC2626),
@@ -173,10 +176,12 @@ class _EquityCurveSection extends StatelessWidget {
           SizedBox(
             height: 300,
             child: data.totalTrades == 0
-                ? const Center(
+                ? Center(
               child: Text(
-                'No trades in this period',
-                style: TextStyle(
+                data.isVi
+                    ? 'Không có lệnh trong giai đoạn này'
+                    : 'No trades in this period',
+                style: const TextStyle(
                   color: Color(0xFF64748B),
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -323,9 +328,9 @@ class _MetricGrid extends StatelessWidget {
       children: [
         Expanded(
           child: _MetricCard(
-            label: 'Total',
+            label: data.isVi ? 'Tổng' : 'Total',
             value: '${data.totalTrades}',
-            subtitle: 'trades',
+            subtitle: data.isVi ? 'lệnh' : 'trades',
             icon: Icons.format_list_numbered,
             color: const Color(0xFF2563EB),
           ),
@@ -334,8 +339,9 @@ class _MetricGrid extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             label: 'Net R',
-            value: '${data.netR >= 0 ? '+' : ''}${data.netR.toStringAsFixed(2)}',
-            subtitle: 'total result',
+            value:
+            '${data.netR >= 0 ? '+' : ''}${data.netR.toStringAsFixed(2)}',
+            subtitle: data.isVi ? 'tổng kết quả' : 'total result',
             icon: Icons.show_chart,
             color: data.netR >= 0
                 ? const Color(0xFF16A34A)
@@ -346,8 +352,9 @@ class _MetricGrid extends StatelessWidget {
         Expanded(
           child: _MetricCard(
             label: 'Avg R',
-            value: '${data.avgR >= 0 ? '+' : ''}${data.avgR.toStringAsFixed(2)}',
-            subtitle: 'per trade',
+            value:
+            '${data.avgR >= 0 ? '+' : ''}${data.avgR.toStringAsFixed(2)}',
+            subtitle: data.isVi ? 'mỗi lệnh' : 'per trade',
             icon: Icons.analytics_outlined,
             color: data.avgR >= 0
                 ? const Color(0xFF16A34A)
@@ -359,7 +366,7 @@ class _MetricGrid extends StatelessWidget {
           child: _MetricCard(
             label: 'Winrate',
             value: '${data.winrate.toStringAsFixed(1)}%',
-            subtitle: 'winning trades',
+            subtitle: data.isVi ? 'lệnh thắng' : 'winning trades',
             icon: Icons.emoji_events_outlined,
             color: const Color(0xFF7C3AED),
           ),
@@ -369,7 +376,7 @@ class _MetricGrid extends StatelessWidget {
           child: _MetricCard(
             label: 'Max DD',
             value: _drawdownText(data.maxDrawdown),
-            subtitle: 'R drawdown',
+            subtitle: data.isVi ? 'drawdown R' : 'R drawdown',
             icon: Icons.trending_down,
             color: const Color(0xFFEA580C),
           ),
@@ -455,9 +462,9 @@ class _GradeBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Grade Breakdown',
-            style: TextStyle(
+          Text(
+            data.isVi ? 'Phân bổ chất lượng' : 'Grade Breakdown',
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: Color(0xFF0F172A),
@@ -565,16 +572,20 @@ class _Insights extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final insights = data.insights.isEmpty
-        ? ['No insights available yet.']
+        ? [
+      data.isVi
+          ? 'Chưa có đủ dữ liệu để tạo điểm đáng chú ý.'
+          : 'No insights available yet.'
+    ]
         : data.insights.take(3).toList();
 
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Key Insights',
-            style: TextStyle(
+          Text(
+            data.isVi ? 'Điểm đáng chú ý' : 'Key Insights',
+            style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: Color(0xFF0F172A),
@@ -622,23 +633,30 @@ String _drawdownText(double value) {
   if (value.abs() < 0.005) return '0.00';
   return '-${value.toStringAsFixed(2)}';
 }
+
 class _Footer extends StatelessWidget {
-  const _Footer();
+  final bool isVi;
+
+  const _Footer({
+    required this.isVi,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(
+        const Icon(
           Icons.auto_graph_outlined,
           color: Color(0xFF2563EB),
           size: 20,
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Text(
-          'Generated by Decision Journal',
-          style: TextStyle(
+          isVi
+              ? 'Được tạo bởi Decision Journal'
+              : 'Generated by Decision Journal',
+          style: const TextStyle(
             color: Color(0xFF64748B),
             fontSize: 15,
             fontWeight: FontWeight.w800,
