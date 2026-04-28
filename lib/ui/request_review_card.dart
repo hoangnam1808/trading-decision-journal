@@ -346,6 +346,8 @@ Available options may include bank transfer, international transfer, or crypto b
             'stop_loss': t.stopLoss,
             'exit': t.exit,
             'result_r': double.parse(t.resultR.toStringAsFixed(2)),
+            'risk_used': double.parse(t.riskUsed.toStringAsFixed(2)),
+            'money_result_note': 'money_result = result_r * risk_used * cash_per_1r - fee',
             'fee': double.parse(t.fee.toStringAsFixed(2)),
             'grade': t.grade.label,
             'checklist': {

@@ -1027,7 +1027,7 @@ class _CalendarSection extends StatelessWidget {
   }
 
   double _tradeMoney(Trade trade) {
-    return trade.resultR * cashPerR - trade.fee;
+    return trade.moneyResult(cashPerR);
   }
 
   double _dayNetMoney(List<Trade> trades) {
@@ -1204,6 +1204,7 @@ class _CalendarSection extends StatelessWidget {
           selectedTrades: selectedTrades,
           dayNetText: _calendarValueText(dayNet),
           moneyMode: moneyMode,
+          cashPerR: cashPerR,
           formatValue: formatValue,
           valueColor: (value) => _valueColor(context, value),
         ),
@@ -1218,6 +1219,7 @@ class _SelectedDayCard extends StatelessWidget {
   final List<Trade> selectedTrades;
   final String dayNetText;
   final bool moneyMode;
+  final double cashPerR;
   final String Function(double value) formatValue;
   final Color Function(double value) valueColor;
 
@@ -1227,9 +1229,13 @@ class _SelectedDayCard extends StatelessWidget {
     required this.selectedTrades,
     required this.dayNetText,
     required this.moneyMode,
+    required this.cashPerR,
     required this.formatValue,
     required this.valueColor,
   });
+  String _moneyText(double value) {
+    return '${value >= 0 ? '+' : ''}\$${value.toStringAsFixed(2)}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1304,10 +1310,10 @@ class _SelectedDayCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            '${s.netR}: ${moneyMode ? formatValue(t.resultR) : t.resultR.toStringAsFixed(2)}',
+                            '${s.netR}: ${moneyMode ? _moneyText(t.moneyResult(cashPerR)) : t.resultR.toStringAsFixed(2)}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               fontWeight: FontWeight.w800,
-                              color: valueColor(t.resultR),
+                              color: valueColor(moneyMode ? t.moneyResult(cashPerR) : t.resultR),
                             ),
                           ),
                           if (t.note != null && t.note!.isNotEmpty) ...[

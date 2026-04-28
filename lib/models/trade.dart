@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 enum TradeGrade { a, aMinus, b }
@@ -17,7 +18,7 @@ extension TradeGradeX on TradeGrade {
   };
 }
 
-@immutable@immutable
+@immutable
 class TradeChecklist {
   final bool contextOk;
   final bool entryZoneOk;
@@ -92,6 +93,7 @@ TradeGrade classifyTrade(TradeChecklist c) {
 
   return TradeGrade.aMinus;
 }
+
 enum Market { forex, crypto, stocks, futures }
 
 extension MarketX on Market {
@@ -119,6 +121,16 @@ class Trade {
   final double entry;
   final double stopLoss;
   final double exit;
+
+  /// Risk size used for this specific trade.
+  ///
+  /// Example:
+  /// - 1.00 = full base 1R
+  /// - 0.75 = 0.75R risk
+  /// - 0.50 = 0.5R risk
+  /// - 0.25 = 0.25R risk
+  final double riskUsed;
+
   final double fee;
   final TradeChecklist checklist;
   final String? beforeImagePath;
@@ -134,6 +146,7 @@ class Trade {
     required this.entry,
     required this.stopLoss,
     required this.exit,
+    this.riskUsed = 1.0,
     this.fee = 0.0,
     required this.checklist,
     this.beforeImagePath,
@@ -156,6 +169,10 @@ class Trade {
     return reward / risk;
   }
 
+  double moneyResult(double cashPerR) {
+    return resultR * riskUsed * cashPerR - fee;
+  }
+
   Trade setAfterImage(String? path) {
     return Trade(
       dateTime: dateTime,
@@ -166,6 +183,7 @@ class Trade {
       entry: entry,
       stopLoss: stopLoss,
       exit: exit,
+      riskUsed: riskUsed,
       fee: fee,
       checklist: checklist,
       beforeImagePath: beforeImagePath,
@@ -184,6 +202,7 @@ class Trade {
       entry: entry,
       stopLoss: stopLoss,
       exit: exit,
+      riskUsed: riskUsed,
       fee: fee,
       checklist: checklist,
       beforeImagePath: path,
@@ -201,6 +220,7 @@ class Trade {
     'entry': entry,
     'stopLoss': stopLoss,
     'exit': exit,
+    'riskUsed': riskUsed,
     'fee': fee,
     'checklist': checklist.toJson(),
     'beforeImagePath': beforeImagePath,
@@ -218,6 +238,7 @@ class Trade {
       entry: (json['entry'] as num).toDouble(),
       stopLoss: (json['stopLoss'] as num).toDouble(),
       exit: (json['exit'] as num).toDouble(),
+      riskUsed: (json['riskUsed'] as num?)?.toDouble() ?? 1.0,
       fee: (json['fee'] as num?)?.toDouble() ?? 0.0,
       checklist: TradeChecklist.fromJson(
         Map<String, dynamic>.from(json['checklist']),

@@ -32,7 +32,7 @@ class ReportBuilder {
 
     final netMoney = sortedTrades.fold<double>(
       0,
-          (sum, trade) => sum + trade.resultR * cashPerR - trade.fee,
+          (sum, trade) => sum + trade.moneyResult(cashPerR),
     );
 
     return ReportData(

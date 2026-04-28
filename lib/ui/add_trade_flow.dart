@@ -52,6 +52,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   final _entryCtrl = TextEditingController();
   final _stopLossCtrl = TextEditingController();
   final _exitCtrl = TextEditingController();
+  final _riskUsedCtrl = TextEditingController();
   final _feeCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
 
@@ -82,6 +83,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _entryCtrl.text = t.entry.toString();
       _stopLossCtrl.text = t.stopLoss.toString();
       _exitCtrl.text = t.exit.toString();
+      _riskUsedCtrl.text = _formatRiskUsed(t.riskUsed);
       _feeCtrl.text = t.fee == 0 ? '' : t.fee.toString();
       _noteCtrl.text = t.note ?? '';
 
@@ -92,6 +94,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _dateTime = DateTime.now();
       _market = Market.forex;
       _dir = TradeDirection.long;
+      _riskUsedCtrl.text = '0.75';
 
     }
     _strategyCtrl.addListener(_onStrategyTextChanged);
@@ -106,6 +109,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     _entryCtrl.dispose();
     _stopLossCtrl.dispose();
     _exitCtrl.dispose();
+    _riskUsedCtrl.dispose();
     _feeCtrl.dispose();
     _noteCtrl.dispose();
     super.dispose();
@@ -287,6 +291,60 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     if (text.isEmpty) return 0.0;
     return double.tryParse(text) ?? 0.0;
   }
+  String _formatRiskUsed(double value) {
+    return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
+  }
+
+  double _suggestedRiskForGrade(TradeGrade grade) {
+    switch (grade) {
+      case TradeGrade.a:
+        return 0.75;
+      case TradeGrade.aMinus:
+        return 0.50;
+      case TradeGrade.b:
+        return 0.25;
+    }
+  }
+
+  double? _parseRiskUsedText(String text) {
+    return double.tryParse(text.trim());
+  }
+
+  double _parseRiskUsed() {
+    final value = _parseRiskUsedText(_riskUsedCtrl.text);
+    if (value == null || value <= 0) return 1.0;
+    return value;
+  }
+
+  Widget _riskQuickPick(double value) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final selected = _riskUsedCtrl.text.trim() == _formatRiskUsed(value);
+
+    return ChoiceChip(
+      label: Text('${_formatRiskUsed(value)}R'),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: primary.withOpacity(
+        theme.brightness == Brightness.dark ? 0.22 : 0.12,
+      ),
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      side: BorderSide(
+        color: selected
+            ? primary.withOpacity(0.35)
+            : theme.colorScheme.outlineVariant,
+      ),
+      labelStyle: theme.textTheme.bodyMedium?.copyWith(
+        color: selected ? primary : theme.colorScheme.onSurface,
+        fontWeight: FontWeight.w800,
+      ),
+      onSelected: (_) {
+        setState(() {
+          _riskUsedCtrl.text = _formatRiskUsed(value);
+        });
+      },
+    );
+  }
 
   void _showChecklistGuide() {
     final s = S.read(context);
@@ -412,6 +470,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       entry: double.parse(_entryCtrl.text.trim()),
       stopLoss: double.parse(_stopLossCtrl.text.trim()),
       exit: double.parse(_exitCtrl.text.trim()),
+      riskUsed: _parseRiskUsed(),
       fee: _parseOptionalFee(),
       checklist: c,
       beforeImagePath: _beforeImagePath,
@@ -451,6 +510,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _entryCtrl.clear();
         _stopLossCtrl.clear();
         _exitCtrl.clear();
+        _riskUsedCtrl.text = '0.75';
         _feeCtrl.clear();
         _noteCtrl.clear();
         _beforeImagePath = null;
@@ -495,6 +555,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
 
     final grade = classifyTrade(c);
     final previewR = _previewR();
+    final suggestedRisk = _suggestedRiskForGrade(grade);
     final gradeColor = _gradeColor(grade);
 
     return Scaffold(
@@ -775,6 +836,78 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _riskUsedCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: s.isVi ? 'Risk lệnh này' : 'Risk used',
+                      hintText: s.isVi
+                          ? 'Ví dụ: 0.75 nghĩa là dùng 0.75R'
+                          : 'Example: 0.75 means this trade used 0.75R',
+                      helperText: s.isVi
+                          ? 'Gợi ý theo grade hiện tại: ${_formatRiskUsed(suggestedRisk)}R'
+                          : 'Suggested for current grade: ${_formatRiskUsed(suggestedRisk)}R',
+                      helperStyle: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black87,
+                      ),
+                    ),
+                    validator: (v) {
+                      final value = _parseRiskUsedText(v ?? '');
+                      if (value == null) return s.numberField;
+                      if (value <= 0) {
+                        return s.isVi
+                            ? 'Risk phải lớn hơn 0'
+                            : 'Risk must be greater than 0';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _riskQuickPick(0.25),
+                        _riskQuickPick(0.50),
+                        _riskQuickPick(0.75),
+                        _riskQuickPick(1.00),
+                        ActionChip(
+                          avatar: Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 17,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          label: Text(
+                            s.isVi
+                                ? 'Gợi ý ${_formatRiskUsed(suggestedRisk)}R'
+                                : 'Suggest ${_formatRiskUsed(suggestedRisk)}R',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          backgroundColor: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).colorScheme.primary.withOpacity(0.16)
+                              : Theme.of(context).colorScheme.primary.withOpacity(0.10),
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.28),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _riskUsedCtrl.text = _formatRiskUsed(suggestedRisk);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 14),
                   _PreviewRCard(
