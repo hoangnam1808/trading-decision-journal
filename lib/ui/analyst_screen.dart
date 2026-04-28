@@ -5,7 +5,6 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../l10n/strings.dart';
 import '../models/trade.dart';
-
 import '../state/app_settings.dart';
 import '../state/trades_store.dart';
 import 'request_review_card.dart';
@@ -53,6 +52,7 @@ class _EquityScreenState extends State<EquityScreen> {
         return s.onlyATrades;
     }
   }
+
   String _analystExportContextLabel({
     required S s,
     required TradesStore store,
@@ -67,6 +67,7 @@ class _EquityScreenState extends State<EquityScreen> {
 
     return '$period · $scenarioLabel · $strategyLabel';
   }
+
   String _viewLabel(S s, AnalystView view) {
     switch (view) {
       case AnalystView.equity:
@@ -174,6 +175,7 @@ class _EquityScreenState extends State<EquityScreen> {
     final persistedCashText = settings.cashPerR.toStringAsFixed(
       settings.cashPerR % 1 == 0 ? 0 : 2,
     );
+
     if (!_cashPerRFocusNode.hasFocus &&
         _cashPerRCtrl.text != persistedCashText) {
       _cashPerRCtrl.text = persistedCashText;
@@ -206,7 +208,7 @@ class _EquityScreenState extends State<EquityScreen> {
         actions: [
           IconButton(
             tooltip: s.isVi ? 'Xuất report' : 'Export report',
-            icon: const Icon(Icons.ios_share_outlined),
+            icon: const Icon(Icons.ios_share_rounded),
             onPressed: () {
               showAnalystExportSheet(
                 context,
@@ -222,7 +224,7 @@ class _EquityScreenState extends State<EquityScreen> {
           ),
           IconButton(
             tooltip: s.isVi ? 'Lọc thời gian' : 'Time filter',
-            icon: const Icon(Icons.filter_alt_outlined),
+            icon: const Icon(Icons.tune_rounded),
             onPressed: () {
               showTimeFilterBottomSheet(context);
             },
@@ -230,7 +232,7 @@ class _EquityScreenState extends State<EquityScreen> {
         ],
       ),
       body: allItems.isEmpty
-          ? Center(child: Text(s.noTradesToSimulate))
+          ? _EmptyAnalystState(text: s.noTradesToSimulate)
           : _buildBody(
         context: context,
         s: s,
@@ -266,160 +268,96 @@ class _EquityScreenState extends State<EquityScreen> {
     final maxDd = _maxDrawdown(curve);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
       children: [
-        Text(
-          s.compareStrategyAndQualityFilters,
-          style: const TextStyle(color: Colors.black54),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SegmentedButton<AnalystView>(
-                  segments: AnalystView.values
-                      .map(
-                        (v) => ButtonSegment<AnalystView>(
-                      value: v,
-                      label: Text(_viewLabel(s, v)),
-                    ),
-                  )
-                      .toList(),
-                  selected: {_view},
-                  onSelectionChanged: (selection) {
-                    setState(() => _view = selection.first);
-                  },
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<EquityScenario>(
-                  segments: EquityScenario.values
-                      .map(
-                        (sc) => ButtonSegment<EquityScenario>(
-                      value: sc,
-                      label: Text(_scenarioTitle(s, sc)),
-                    ),
-                  )
-                      .toList(),
-                  selected: {_scenario},
-                  onSelectionChanged: (selection) {
-                    setState(() => _scenario = selection.first);
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: effectiveStrategyFilter,
-                  decoration: InputDecoration(
-                    labelText: s.strategy,
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: _allStrategiesKey,
-                      child: Text(s.allStrategies),
-                    ),
-                    ...strategies.map(
-                          (strategy) => DropdownMenuItem(
-                        value: strategy,
-                        child: Text(strategy),
-                      ),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _strategyFilter = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<bool>(
-                  segments: [
-                    ButtonSegment<bool>(value: false, label: Text(s.rUnit)),
-                    ButtonSegment<bool>(value: true, label: Text(s.moneyUnit)),
-                  ],
-                  selected: {_moneyMode},
-                  onSelectionChanged: (selection) {
-                    setState(() => _moneyMode = selection.first);
-                  },
-                ),
-                if (_moneyMode) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _cashPerRCtrl,
-                          focusNode: _cashPerRFocusNode,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: InputDecoration(
-                            labelText: s.cashPerR,
-                            hintText: s.cashPerRHint,
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: () async {
-                          final value =
-                          double.tryParse(_cashPerRCtrl.text.trim());
-                          if (value == null || value <= 0) return;
-
-                          await context.read<AppSettings>().setCashPerR(value);
-
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(s.cashPerRSaved)),
-                          );
-                        },
-                        child: Text(s.save),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
+        _CompactFilterCard(
+          description: s.compareStrategyAndQualityFilters,
+          viewOptions: AnalystView.values
+              .map(
+                (v) => _SegmentOption<AnalystView>(
+              value: v,
+              label: _viewLabel(s, v),
             ),
-          ),
+          )
+              .toList(),
+          selectedView: _view,
+          onViewChanged: (value) => setState(() => _view = value),
+          scenarioOptions: EquityScenario.values
+              .map(
+                (sc) => _SegmentOption<EquityScenario>(
+              value: sc,
+              label: _scenarioTitle(s, sc),
+            ),
+          )
+              .toList(),
+          selectedScenario: _scenario,
+          onScenarioChanged: (value) => setState(() => _scenario = value),
+          strategyLabel: s.strategy,
+          allStrategiesLabel: s.allStrategies,
+          strategies: strategies,
+          effectiveStrategyFilter: effectiveStrategyFilter,
+          allStrategiesKey: _allStrategiesKey,
+          onStrategyChanged: (value) {
+            if (value != null) {
+              setState(() => _strategyFilter = value);
+            }
+          },
+          rLabel: s.rUnit,
+          moneyLabel: s.moneyUnit,
+          moneyMode: _moneyMode,
+          onMoneyModeChanged: (value) => setState(() => _moneyMode = value),
+          showCashInput: _moneyMode,
+          cashPerRCtrl: _cashPerRCtrl,
+          cashPerRFocusNode: _cashPerRFocusNode,
+          cashPerRLabel: s.cashPerR,
+          cashPerRHint: s.cashPerRHint,
+          saveLabel: s.save,
+          onSaveCashPerR: () async {
+            final value = double.tryParse(_cashPerRCtrl.text.trim());
+            if (value == null || value <= 0) return;
+
+            await context.read<AppSettings>().setCashPerR(value);
+
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(s.cashPerRSaved)),
+            );
+          },
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _MetricCard(
+        const SizedBox(height: 14),
+        _CompactStatsCard(
+          items: [
+            _StatItem(
               label: s.totalTrades,
               value: '${trades.length}',
-              icon: Icons.format_list_numbered,
+              icon: Icons.format_list_numbered_rounded,
             ),
-            _MetricCard(
+            _StatItem(
               label: s.netR,
-              value: netR.toStringAsFixed(2),
-              icon: Icons.show_chart,
+              value: _signedNumber(netR),
+              icon: Icons.show_chart_rounded,
               valueColor: _valueColor(context, netR),
             ),
-            _MetricCard(
+            _StatItem(
               label: s.avgR,
-              value: avgR.toStringAsFixed(2),
-              icon: Icons.analytics_outlined,
+              value: _signedNumber(avgR),
+              icon: Icons.analytics_rounded,
               valueColor: _valueColor(context, avgR),
             ),
-            _MetricCard(
+            _StatItem(
               label: s.winrate,
               value: '${winrate.toStringAsFixed(1)}%',
-              icon: Icons.emoji_events_outlined,
+              icon: Icons.emoji_events_rounded,
             ),
-            _MetricCard(
+            _StatItem(
               label: s.maxDd,
               value: maxDd.toStringAsFixed(2),
-              icon: Icons.trending_down,
+              icon: Icons.trending_down_rounded,
+              valueColor: maxDd > 0 ? Colors.orange : null,
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         if (_view == AnalystView.equity)
           _EquitySection(
             trades: trades,
@@ -454,7 +392,7 @@ class _EquityScreenState extends State<EquityScreen> {
             cashPerR: cashPerR,
             formatValue: (value) => _formatValue(value, s, cashPerR),
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         _ExportReportCard(
           onTap: () => showAnalystExportSheet(
             context,
@@ -467,9 +405,407 @@ class _EquityScreenState extends State<EquityScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         const RequestReviewCard(),
       ],
+    );
+  }
+}
+
+String _signedNumber(double value) {
+  final sign = value > 0 ? '+' : '';
+  return '$sign${value.toStringAsFixed(2)}';
+}
+
+class _ProCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _ProCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.06),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SegmentOption<T> {
+  final T value;
+  final String label;
+
+  const _SegmentOption({
+    required this.value,
+    required this.label,
+  });
+}
+
+class _CompactSegmented<T> extends StatelessWidget {
+  final List<_SegmentOption<T>> options;
+  final T selected;
+  final ValueChanged<T> onChanged;
+
+  const _CompactSegmented({
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((option) {
+        final active = option.value == selected;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: () => onChanged(option.value),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: active
+                    ? primary.withOpacity(isDark ? 0.24 : 0.13)
+                    : theme.colorScheme.surface.withOpacity(0.48),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: active
+                      ? primary.withOpacity(0.55)
+                      : theme.colorScheme.outlineVariant.withOpacity(0.45),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (active) ...[
+                    Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: primary,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    option.label,
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: active ? primary : theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _CompactFilterCard extends StatelessWidget {
+  final String description;
+
+  final List<_SegmentOption<AnalystView>> viewOptions;
+  final AnalystView selectedView;
+  final ValueChanged<AnalystView> onViewChanged;
+
+  final List<_SegmentOption<EquityScenario>> scenarioOptions;
+  final EquityScenario selectedScenario;
+  final ValueChanged<EquityScenario> onScenarioChanged;
+
+  final String strategyLabel;
+  final String allStrategiesLabel;
+  final List<String> strategies;
+  final String effectiveStrategyFilter;
+  final String allStrategiesKey;
+  final ValueChanged<String?> onStrategyChanged;
+
+  final String rLabel;
+  final String moneyLabel;
+  final bool moneyMode;
+  final ValueChanged<bool> onMoneyModeChanged;
+
+  final bool showCashInput;
+  final TextEditingController cashPerRCtrl;
+  final FocusNode cashPerRFocusNode;
+  final String cashPerRLabel;
+  final String cashPerRHint;
+  final String saveLabel;
+  final VoidCallback onSaveCashPerR;
+
+  const _CompactFilterCard({
+    required this.description,
+    required this.viewOptions,
+    required this.selectedView,
+    required this.onViewChanged,
+    required this.scenarioOptions,
+    required this.selectedScenario,
+    required this.onScenarioChanged,
+    required this.strategyLabel,
+    required this.allStrategiesLabel,
+    required this.strategies,
+    required this.effectiveStrategyFilter,
+    required this.allStrategiesKey,
+    required this.onStrategyChanged,
+    required this.rLabel,
+    required this.moneyLabel,
+    required this.moneyMode,
+    required this.onMoneyModeChanged,
+    required this.showCashInput,
+    required this.cashPerRCtrl,
+    required this.cashPerRFocusNode,
+    required this.cashPerRLabel,
+    required this.cashPerRHint,
+    required this.saveLabel,
+    required this.onSaveCashPerR,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _ProCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _CompactSegmented<AnalystView>(
+            options: viewOptions,
+            selected: selectedView,
+            onChanged: onViewChanged,
+          ),
+          const SizedBox(height: 10),
+          _CompactSegmented<EquityScenario>(
+            options: scenarioOptions,
+            selected: selectedScenario,
+            onChanged: onScenarioChanged,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: effectiveStrategyFilter,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: strategyLabel,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: allStrategiesKey,
+                      child: Text(allStrategiesLabel),
+                    ),
+                    ...strategies.map(
+                          (strategy) => DropdownMenuItem(
+                        value: strategy,
+                        child: Text(strategy),
+                      ),
+                    ),
+                  ],
+                  onChanged: onStrategyChanged,
+                ),
+              ),
+              const SizedBox(width: 10),
+              _CompactSegmented<bool>(
+                options: [
+                  _SegmentOption<bool>(value: false, label: rLabel),
+                  _SegmentOption<bool>(value: true, label: moneyLabel),
+                ],
+                selected: moneyMode,
+                onChanged: onMoneyModeChanged,
+              ),
+            ],
+          ),
+          if (showCashInput) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: cashPerRCtrl,
+                    focusNode: cashPerRFocusNode,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: cashPerRLabel,
+                      hintText: cashPerRHint,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: onSaveCashPerR,
+                  child: Text(saveLabel),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatItem {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? valueColor;
+
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.valueColor,
+  });
+}
+
+class _CompactStatsCard extends StatelessWidget {
+  final List<_StatItem> items;
+
+  const _CompactStatsCard({
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _ProCard(
+      padding: const EdgeInsets.all(14),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const gap = 10.0;
+          final itemWidth = (constraints.maxWidth - gap) / 2;
+
+          return Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: items
+                .map(
+                  (item) => SizedBox(
+                width: itemWidth,
+                child: _TinyMetric(item: item),
+              ),
+            )
+                .toList(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TinyMetric extends StatelessWidget {
+  final _StatItem item;
+
+  const _TinyMetric({
+    required this.item,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.32 : 0.75,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.38),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            item.icon,
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  item.value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: item.valueColor ?? theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -506,126 +842,150 @@ class _EquitySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final theme = Theme.of(context);
     final curve = _buildCurve(trades);
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+    return _ProCard(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 230,
+            child: trades.isEmpty
+                ? Center(
+              child: Text(
+                s.noTradesInThisFilter,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.black54),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 280,
-              child: trades.isEmpty
-                  ? Center(child: Text(s.noTradesInThisFilter))
-                  : LineChart(
-                LineChartData(
-                  minX: 0,
-                  maxX: (curve.length - 1).toDouble(),
-                  minY: minY,
-                  maxY: maxY,
-                  gridData: FlGridData(
-                    show: true,
-                    horizontalInterval: niceInterval(minY, maxY),
-                    drawVerticalLine: false,
+            )
+                : LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: (curve.length - 1).toDouble(),
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  horizontalInterval: niceInterval(minY, maxY),
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: theme.colorScheme.outlineVariant
+                          .withOpacity(0.28),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(
+                    color:
+                    theme.colorScheme.outlineVariant.withOpacity(0.35),
                   ),
-                  borderData: FlBorderData(
-                    show: true,
-                    border: Border.all(color: Colors.black12),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
                   ),
-                  titlesData: FlTitlesData(
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 42,
-                        interval: niceInterval(minY, maxY),
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            value.toStringAsFixed(1),
-                            style: const TextStyle(fontSize: 11),
-                          );
-                        },
-                      ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        interval: bottomInterval(curve.length),
-                        getTitlesWidget: (value, meta) {
-                          final idx = value.toInt();
-                          if (idx < 0 || idx >= curve.length) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              '$idx',
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
                   ),
-                  lineTouchData: LineTouchData(
-                    handleBuiltInTouches: true,
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (spots) {
-                        return spots.map((spot) {
-                          return LineTooltipItem(
-                            'Trade ${spot.x.toInt()}\n${spot.y.toStringAsFixed(2)} R',
-                            const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          );
-                        }).toList();
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 38,
+                      interval: niceInterval(minY, maxY),
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        );
                       },
                     ),
                   ),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: List.generate(
-                        curve.length,
-                            (i) => FlSpot(i.toDouble(), curve[i]),
-                      ),
-                      isCurved: false,
-                      barWidth: 3,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.12),
-                      ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      interval: bottomInterval(curve.length),
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= curve.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Text(
+                            '$idx',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ],
+                  ),
                 ),
+                lineTouchData: LineTouchData(
+                  handleBuiltInTouches: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (spots) {
+                      return spots.map((spot) {
+                        return LineTooltipItem(
+                          'Trade ${spot.x.toInt()}\n${spot.y.toStringAsFixed(2)} R',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: List.generate(
+                      curve.length,
+                          (i) => FlSpot(i.toDouble(), curve[i]),
+                    ),
+                    isCurved: false,
+                    barWidth: 3,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color:
+                      theme.colorScheme.primary.withOpacity(0.12),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -665,6 +1025,7 @@ class _CalendarSection extends StatelessWidget {
   double _dayNetR(List<Trade> trades) {
     return trades.fold<double>(0, (sum, t) => sum + t.resultR);
   }
+
   double _tradeMoney(Trade trade) {
     return trade.resultR * cashPerR - trade.fee;
   }
@@ -682,159 +1043,282 @@ class _CalendarSection extends StatelessWidget {
     return formatValue(value);
   }
 
-  Color _valueColor(double value) {
+  Color _valueColor(BuildContext context, double value) {
     if (value > 0) return Colors.green;
     if (value < 0) return Colors.red;
-    return Colors.grey;
+    return Theme.of(context).colorScheme.onSurfaceVariant;
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     final monthTrades = grouped.entries
         .where(
-          (e) => e.key.year == focusedDay.year && e.key.month == focusedDay.month,
+          (e) =>
+      e.key.year == focusedDay.year && e.key.month == focusedDay.month,
     )
         .expand((e) => e.value)
         .toList();
-    final monthNet = moneyMode
-        ? _dayNetMoney(monthTrades)
-        : _dayNetR(monthTrades);
 
-    final dayNet = moneyMode
-        ? _dayNetMoney(selectedTrades)
-        : _dayNetR(selectedTrades);
+    final monthNet =
+    moneyMode ? _dayNetMoney(monthTrades) : _dayNetR(monthTrades);
+
+    final dayNet =
+    moneyMode ? _dayNetMoney(selectedTrades) : _dayNetR(selectedTrades);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: TableCalendar<Trade>(
-              locale: localeCode,
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2100, 12, 31),
-              focusedDay: focusedDay,
-              selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-              onDaySelected: onDaySelected,
-              onPageChanged: onPageChanged,
-              eventLoader: (day) => grouped[_dayKey(day)] ?? const [],
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, day, events) {
-                  if (events.isEmpty) return const SizedBox.shrink();
+        _ProCard(
+          padding: const EdgeInsets.all(12),
+          child: TableCalendar<Trade>(
+            locale: localeCode,
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2100, 12, 31),
+            focusedDay: focusedDay,
+            selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+            onDaySelected: onDaySelected,
+            onPageChanged: onPageChanged,
+            eventLoader: (day) => grouped[_dayKey(day)] ?? const [],
+            rowHeight: 46,
+            daysOfWeekHeight: 24,
+            headerStyle: HeaderStyle(
+              titleCentered: true,
+              formatButtonVisible: false,
+              titleTextStyle: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: theme.colorScheme.onSurface,
+              ) ??
+                  const TextStyle(),
+              leftChevronIcon: Icon(
+                Icons.chevron_left_rounded,
+                color: theme.colorScheme.onSurface,
+              ),
+              rightChevronIcon: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            daysOfWeekStyle: DaysOfWeekStyle(
+              weekdayStyle: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ) ??
+                  const TextStyle(),
+              weekendStyle: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+              ) ??
+                  const TextStyle(),
+            ),
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              todayDecoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.18),
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                shape: BoxShape.circle,
+              ),
+              defaultTextStyle: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+              weekendTextStyle: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+              todayTextStyle: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w900,
+              ),
+              selectedTextStyle: TextStyle(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, day, events) {
+                if (events.isEmpty) return const SizedBox.shrink();
 
-                  final dayTrades = events.cast<Trade>().toList();
-                  final net = moneyMode
-                      ? _dayNetMoney(dayTrades)
-                      : _dayNetR(dayTrades);
-                  final positive = net >= 0;
+                final dayTrades = events.cast<Trade>().toList();
+                final net =
+                moneyMode ? _dayNetMoney(dayTrades) : _dayNetR(dayTrades);
+                final positive = net >= 0;
+                final color = positive ? Colors.green : Colors.red;
 
-                  return Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 2),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: positive
-                            ? Colors.green.withOpacity(0.15)
-                            : Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _calendarValueText(net),
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w600,
-                          color: positive ? Colors.green : Colors.red,
-                        ),
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      _calendarValueText(net),
+                      style: TextStyle(
+                        fontSize: 8.5,
+                        fontWeight: FontWeight.w800,
+                        color: color,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _MetricCard(
+        _CompactStatsCard(
+          items: [
+            _StatItem(
               label: s.monthSummary,
               value: _calendarValueText(monthNet),
-              icon: Icons.calendar_month_outlined,
-              valueColor: _valueColor(monthNet),
+              icon: Icons.calendar_month_rounded,
+              valueColor: _valueColor(context, monthNet),
             ),
-            _MetricCard(
+            _StatItem(
               label: s.selectedDayLabel,
               value: _calendarValueText(dayNet),
-              icon: Icons.today_outlined,
-              valueColor: _valueColor(dayNet),
+              icon: Icons.today_rounded,
+              valueColor: _valueColor(context, dayNet),
             ),
-            _MetricCard(
+            _StatItem(
               label: s.tradesCount,
               value: '${selectedTrades.length}',
-              icon: Icons.list_alt_outlined,
+              icon: Icons.list_alt_rounded,
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          '${s.selectedDayLabel}: ${selectedKey.year}-${selectedKey.month.toString().padLeft(2, '0')}-${selectedKey.day.toString().padLeft(2, '0')}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        const SizedBox(height: 14),
+        _SelectedDayCard(
+          s: s,
+          selectedKey: selectedKey,
+          selectedTrades: selectedTrades,
+          dayNetText: _calendarValueText(dayNet),
+          moneyMode: moneyMode,
+          formatValue: formatValue,
+          valueColor: (value) => _valueColor(context, value),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '${s.netValue}: ${_calendarValueText(dayNet)} • ${s.tradesCount}: ${selectedTrades.length}',
-          style: const TextStyle(color: Colors.black54),
-        ),
-        const SizedBox(height: 12),
-        if (selectedTrades.isEmpty)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(s.noTradesOnThisDay),
+      ],
+    );
+  }
+}
+
+class _SelectedDayCard extends StatelessWidget {
+  final S s;
+  final DateTime selectedKey;
+  final List<Trade> selectedTrades;
+  final String dayNetText;
+  final bool moneyMode;
+  final String Function(double value) formatValue;
+  final Color Function(double value) valueColor;
+
+  const _SelectedDayCard({
+    required this.s,
+    required this.selectedKey,
+    required this.selectedTrades,
+    required this.dayNetText,
+    required this.moneyMode,
+    required this.formatValue,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dateText =
+        '${selectedKey.year}-${selectedKey.month.toString().padLeft(2, '0')}-${selectedKey.day.toString().padLeft(2, '0')}';
+
+    return _ProCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${s.selectedDayLabel}: $dateText',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
             ),
-          )
-        else
-          ...selectedTrades.map(
-                (t) => Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${s.netValue}: $dayNetText • ${s.tradesCount}: ${selectedTrades.length}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (selectedTrades.isEmpty)
+            Text(
+              s.noTradesOnThisDay,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            ...selectedTrades.map(
+                  (t) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(child: Text(t.grade.label)),
-                    const SizedBox(width: 12),
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.green.withOpacity(0.14),
+                      child: Text(
+                        t.grade.label,
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 11),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             '${t.symbol} • ${t.direction.label}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Text('${s.strategy}: ${t.strategy}'),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${s.strategy}: ${t.strategy}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
                           Text(
                             '${s.netR}: ${moneyMode ? formatValue(t.resultR) : t.resultR.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: _valueColor(t.resultR),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: valueColor(t.resultR),
                             ),
                           ),
                           if (t.note != null && t.note!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
                               t.note!,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.black54),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ],
@@ -844,60 +1328,12 @@ class _CalendarSection extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-      ],
-    );
-  }
-}
-
-class _MetricCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color? valueColor;
-
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 165,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.black54,
-                  fontSize: 13,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor,
-                ),
-              ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 }
+
 class _ExportReportCard extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -907,55 +1343,96 @@ class _ExportReportCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    final s = S.of(context);
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
 
-    return Card(
+    return _ProCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 23,
+            backgroundColor: primary.withOpacity(0.12),
+            child: Icon(
+              Icons.ios_share_rounded,
+              color: primary,
+            ),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.isVi
+                      ? 'Xuất report hiệu suất'
+                      : 'Export Performance Report',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  s.isVi
+                      ? 'Tạo ảnh hoặc PDF report từ journal giao dịch của bạn.'
+                      : 'Create a clean image or PDF report from your trading journal.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: onTap,
+            icon: const Icon(Icons.file_download_outlined),
+            label: Text(s.isVi ? 'Xuất' : 'Export'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyAnalystState extends StatelessWidget {
+  final String text;
+
+  const _EmptyAnalystState({
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: primary.withOpacity(0.10),
-              child: Icon(
-                Icons.ios_share_outlined,
-                color: primary,
+        padding: const EdgeInsets.all(24),
+        child: _ProCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.analytics_rounded,
+                size: 48,
+                color: theme.colorScheme.primary,
               ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    S.of(context).isVi
-                        ? 'Xuất report hiệu suất'
-                        : 'Export Performance Report',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    S.of(context).isVi
-                        ? 'Tạo ảnh hoặc PDF report từ journal giao dịch của bạn.'
-                        : 'Create a clean image or PDF report from your trading journal.',
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 14),
+              Text(
+                text,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: onTap,
-              icon: const Icon(Icons.file_download_outlined),
-              label: Text(S.of(context).isVi ? 'Xuất' : 'Export'),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
