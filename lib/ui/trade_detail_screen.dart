@@ -20,7 +20,33 @@ class TradeDetailScreen extends StatelessWidget {
     required this.index,
   });
 
-  Future<void> _pickAfterImage(BuildContext context, Trade currentTrade) async {
+  int _resolveStoreIndex(TradesStore store) {
+    if (index >= 0 &&
+        index < store.items.length &&
+        _sameTradeBase(store.items[index], trade)) {
+      return index;
+    }
+
+    return store.items.indexWhere((t) => _sameTradeBase(t, trade));
+  }
+
+  static bool _sameTradeBase(Trade a, Trade b) {
+    return a.dateTime == b.dateTime &&
+        a.market == b.market &&
+        a.strategy == b.strategy &&
+        a.symbol == b.symbol &&
+        a.direction == b.direction &&
+        a.entry == b.entry &&
+        a.stopLoss == b.stopLoss &&
+        a.exit == b.exit &&
+        a.fee == b.fee;
+  }
+
+  Future<void> _pickAfterImage(
+      BuildContext context,
+      Trade currentTrade,
+      int storeIndex,
+      ) async {
     final s = S.read(context);
     final picker = ImagePicker();
 
@@ -42,7 +68,7 @@ class TradeDetailScreen extends StatelessWidget {
 
     final copied = await File(picked.path).copy(newPath);
 
-    await context.read<TradesStore>().updateAfterImageAt(index, copied.path);
+    await context.read<TradesStore>().updateAfterImageAt(storeIndex, copied.path);
 
     if (!context.mounted) return;
 
@@ -51,7 +77,7 @@ class TradeDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context) async {
+  Future<void> _confirmDelete(BuildContext context, int storeIndex) async {
     final s = S.read(context);
 
     final confirmed = await showDialog<bool>(
@@ -77,7 +103,7 @@ class TradeDetailScreen extends StatelessWidget {
     if (confirmed != true) return;
 
     final messenger = ScaffoldMessenger.of(context);
-    await context.read<TradesStore>().deleteTradeAt(index);
+    await context.read<TradesStore>().deleteTradeAt(storeIndex);
 
     if (!context.mounted) return;
     Navigator.of(context).pop();
@@ -87,12 +113,12 @@ class TradeDetailScreen extends StatelessWidget {
     );
   }
 
-  void _openEdit(BuildContext context, Trade currentTrade) {
+  void _openEdit(BuildContext context, Trade currentTrade, int storeIndex) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AddTradeFlow(
           initialTrade: currentTrade,
-          editIndex: index,
+          editIndex: storeIndex,
         ),
       ),
     );
@@ -113,18 +139,27 @@ class TradeDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final store = context.watch<TradesStore>();
+    final theme = Theme.of(context);
 
-    if (index < 0 || index >= store.items.length) {
+    final storeIndex = _resolveStoreIndex(store);
+
+    if (storeIndex < 0 || storeIndex >= store.items.length) {
       return Scaffold(
         appBar: AppBar(title: Text(s.tradeDetail)),
-        body: Center(child: Text(s.tradeNotFound)),
+        body: Center(
+          child: Text(
+            s.tradeNotFound,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       );
     }
 
-    final currentTrade = store.items[index];
+    final currentTrade = store.items[storeIndex];
     final gradeColor = _gradeColor(currentTrade.grade);
-    final resultColor =
-    currentTrade.resultR >= 0 ? Colors.green : Colors.red;
+    final resultColor = currentTrade.resultR >= 0 ? Colors.green : Colors.red;
 
     return Scaffold(
       appBar: AppBar(
@@ -132,120 +167,24 @@ class TradeDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             tooltip: s.deleteTrade,
-            onPressed: () => _confirmDelete(context),
-            icon: const Icon(Icons.delete_outline),
+            onPressed: () => _confirmDelete(context, storeIndex),
+            icon: const Icon(Icons.delete_outline_rounded),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
         children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Theme.of(context).cardColor,
-              border: Border.all(color: Colors.black12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: gradeColor.withOpacity(0.15),
-                      child: Text(
-                        currentTrade.grade.label,
-                        style: TextStyle(
-                          color: gradeColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              Text(
-                                currentTrade.symbol,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              _Pill(
-                                text: currentTrade.market.label,
-                                color: Colors.blueGrey,
-                              ),
-                              _Pill(
-                                text: currentTrade.direction.label,
-                                color: currentTrade.direction ==
-                                    TradeDirection.long
-                                    ? Colors.green
-                                    : Colors.red,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _dateText(currentTrade.dateTime),
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    color: resultColor.withOpacity(0.10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        currentTrade.resultR >= 0
-                            ? Icons.trending_up
-                            : Icons.trending_down,
-                        color: resultColor,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${currentTrade.resultR >= 0 ? '+' : ''}${currentTrade.resultR.toStringAsFixed(2)}R',
-                        style: TextStyle(
-                          color: resultColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          _HeroTradeCard(
+            trade: currentTrade,
+            gradeColor: gradeColor,
+            resultColor: resultColor,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           _SectionCard(
-            title: 'Execution',
+            title: s.isVi ? 'Thực thi' : 'Execution',
+            icon: Icons.query_stats_rounded,
             child: Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -263,38 +202,41 @@ class TradeDetailScreen extends StatelessWidget {
                 _DetailStat(label: s.grade, value: currentTrade.grade.label),
                 _DetailStat(
                   label: s.strategy,
-                  value: currentTrade.strategy,
+                  value: currentTrade.strategy.trim().isEmpty
+                      ? '—'
+                      : currentTrade.strategy,
                 ),
               ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           _SectionCard(
             title: s.decisionChecklist,
+            icon: Icons.fact_check_rounded,
             child: Column(
               children: [
                 _ChecklistRow(
                   title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
                   value: currentTrade.checklist.contextOk,
                 ),
-                const Divider(height: 18),
+                const SizedBox(height: 10),
                 _ChecklistRow(
                   title: s.isVi ? 'Vùng vào hợp lệ' : 'Entry zone valid',
                   value: currentTrade.checklist.entryZoneOk,
                 ),
-                const Divider(height: 18),
+                const SizedBox(height: 10),
                 _ChecklistRow(
                   title: s.isVi ? 'Execution đúng' : 'Execution valid',
                   value: currentTrade.checklist.executionOk,
                 ),
-                const Divider(height: 18),
+                const SizedBox(height: 10),
                 _ChecklistRow(
                   title: s.isVi ? 'Risk đúng' : 'Risk valid',
                   value: currentTrade.checklist.riskOk,
                 ),
-                const Divider(height: 18),
+                const SizedBox(height: 10),
                 _ChecklistRow(
                   title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',
                   value: !currentTrade.checklist.emotional,
@@ -304,20 +246,26 @@ class TradeDetailScreen extends StatelessWidget {
           ),
 
           if ((currentTrade.note ?? '').trim().isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.note,
+              icon: Icons.notes_rounded,
               child: Text(
                 currentTrade.note!.trim(),
-                style: const TextStyle(height: 1.5),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  height: 1.5,
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           _SectionCard(
-            title: 'Charts',
+            title: s.isVi ? 'Biểu đồ' : 'Charts',
+            icon: Icons.image_rounded,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -346,40 +294,53 @@ class TradeDetailScreen extends StatelessWidget {
                   ),
                 if (!(currentTrade.beforeImagePath?.isNotEmpty ?? false) &&
                     !(currentTrade.afterImagePath?.isNotEmpty ?? false))
-                  Text(
-                    s.noTradesOnThisDay,
-                    style: TextStyle(color: Colors.grey.shade600),
+                  _EmptyChartMessage(
+                    text: s.isVi
+                        ? 'Chưa có ảnh chart cho lệnh này.'
+                        : 'No chart images for this trade yet.',
                   ),
               ],
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _openEdit(context, currentTrade),
-                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _openEdit(context, currentTrade, storeIndex),
+                  icon: const Icon(Icons.edit_rounded),
                   label: Text(s.editTrade),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => _pickAfterImage(context, currentTrade),
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  onPressed: () =>
+                      _pickAfterImage(context, currentTrade, storeIndex),
+                  icon: const Icon(Icons.add_photo_alternate_rounded),
                   label: Text(
                     currentTrade.afterImagePath?.isNotEmpty ?? false
                         ? s.replaceLabel
                         : s.afterChartTitle,
                   ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 28),
         ],
       ),
     );
@@ -395,48 +356,286 @@ class TradeDetailScreen extends StatelessWidget {
         return Colors.red;
     }
   }
-
-  static String _dateText(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-  }
 }
+
 String _feeText(double fee) {
   if (fee.abs() < 0.005) return '0.00';
   return fee.toStringAsFixed(2);
 }
+
+String _dateText(DateTime dt) {
+  return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  '
+      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+}
+
+class _HeroTradeCard extends StatelessWidget {
+  final Trade trade;
+  final Color gradeColor;
+  final Color resultColor;
+
+  const _HeroTradeCard({
+    required this.trade,
+    required this.gradeColor,
+    required this.resultColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _ProCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _GradeBadge(
+                label: trade.grade.label,
+                color: gradeColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 7,
+                      runSpacing: 7,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          trade.symbol,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                        _Pill(
+                          text: trade.market.label,
+                          color: theme.colorScheme.primary,
+                        ),
+                        _Pill(
+                          text: trade.direction.label,
+                          icon: trade.direction == TradeDirection.long
+                              ? Icons.north_east_rounded
+                              : Icons.south_east_rounded,
+                          color: trade.direction == TradeDirection.long
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 15,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            _dateText(trade.dateTime),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: resultColor.withOpacity(0.12),
+              border: Border.all(
+                color: resultColor.withOpacity(0.24),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  trade.resultR >= 0
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
+                  color: resultColor,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Result',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: resultColor,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${trade.resultR >= 0 ? '+' : ''}${trade.resultR.toStringAsFixed(2)}R',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: resultColor,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _ProCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.06),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   final String title;
+  final IconData icon;
   final Widget child;
 
   const _SectionCard({
     required this.title,
+    required this.icon,
     required this.child,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Theme.of(context).cardColor,
-        border: Border.all(color: Colors.black12),
-      ),
+    final theme = Theme.of(context);
+
+    return _ProCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              _IconBubble(icon: icon),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           child,
         ],
+      ),
+    );
+  }
+}
+
+class _IconBubble extends StatelessWidget {
+  final IconData icon;
+
+  const _IconBubble({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: primary.withOpacity(0.11),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: primary.withOpacity(0.18),
+        ),
+      ),
+      child: Icon(
+        icon,
+        color: primary,
+        size: 20,
+      ),
+    );
+  }
+}
+
+class _GradeBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _GradeBadge({
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.14),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: color.withOpacity(0.24),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w900,
+          fontSize: 16,
+        ),
       ),
     );
   }
@@ -453,28 +652,39 @@ class _DetailStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
-      width: 140,
+      width: 142,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.black.withOpacity(0.03),
+        color: theme.colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.32 : 0.75,
+        ),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.38),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w900,
             ),
           ),
         ],
@@ -487,7 +697,6 @@ class _ChecklistRow extends StatelessWidget {
   final String title;
   final bool value;
 
-
   const _ChecklistRow({
     required this.title,
     required this.value,
@@ -496,32 +705,45 @@ class _ChecklistRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final theme = Theme.of(context);
     final good = value;
     final color = good ? Colors.green : Colors.red;
 
-    return Row(
-      children: [
-        Icon(
-          good ? Icons.check_circle : Icons.cancel,
-          color: color,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withOpacity(0.18),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
-        Text(
-          value
-              ? (s.isVi ? 'Đạt' : 'Yes')
-              : (s.isVi ? 'Không đạt' : 'No'),
-          style: TextStyle(
+      ),
+      child: Row(
+        children: [
+          Icon(
+            good ? Icons.check_circle_rounded : Icons.cancel_rounded,
             color: color,
-            fontWeight: FontWeight.w700,
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            value
+                ? (s.isVi ? 'Đạt' : 'Yes')
+                : (s.isVi ? 'Không đạt' : 'No'),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -539,14 +761,15 @@ class _ChartPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.grey.shade800,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 10),
@@ -568,30 +791,83 @@ class _ChartPreview extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
+class _EmptyChartMessage extends StatelessWidget {
   final String text;
-  final Color color;
 
-  const _Pill({
+  const _EmptyChartMessage({
     required this.text,
-    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.32 : 0.75,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.38),
+        ),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _Pill extends StatelessWidget {
+  final String text;
+  final Color color;
+  final IconData? icon;
+
+  const _Pill({
+    required this.text,
+    required this.color,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: color.withOpacity(0.10),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
+        color: color.withOpacity(0.11),
+        border: Border.all(
+          color: color.withOpacity(0.20),
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              color: color,
+              size: 13,
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -610,6 +886,7 @@ class _FullImageScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(title)),
+      backgroundColor: Colors.black,
       body: InteractiveViewer(
         child: Center(
           child: Image.file(File(imagePath)),
