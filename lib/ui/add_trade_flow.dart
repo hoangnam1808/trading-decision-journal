@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../l10n/strings.dart';
 import '../models/trade.dart';
 import '../state/trades_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AddTradeFlow extends StatefulWidget {
   final Trade? initialTrade;
@@ -29,14 +30,18 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   final _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
-  static const _strategySuggestions = [
-    'Wyckoff',
+  static const _strategyPrefsKey = 'strategy_quick_picks_v1';
+
+  static const _defaultStrategySuggestions = [
     'Price Action',
     'SMC',
+    'Wyckoff',
     'Breakout',
     'Trend Following',
     'Mean Reversion',
   ];
+
+  List<String> _strategySuggestions = [..._defaultStrategySuggestions];
 
   late DateTime _dateTime;
   late Market _market;
@@ -87,12 +92,15 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _dateTime = DateTime.now();
       _market = Market.forex;
       _dir = TradeDirection.long;
-      _strategyCtrl.text = 'Wyckoff';
+
     }
+    _strategyCtrl.addListener(_onStrategyTextChanged);
+    _loadStrategySuggestions();
   }
 
   @override
   void dispose() {
+    _strategyCtrl.removeListener(_onStrategyTextChanged);
     _strategyCtrl.dispose();
     _symbolCtrl.dispose();
     _entryCtrl.dispose();
@@ -102,7 +110,109 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     _noteCtrl.dispose();
     super.dispose();
   }
+  void _onStrategyTextChanged() {
+    if (mounted) setState(() {});
+  }
 
+  bool _sameStrategy(String a, String b) {
+    return a.trim().toLowerCase() == b.trim().toLowerCase();
+  }
+
+  bool _containsStrategy(List<String> list, String value) {
+    return list.any((item) => _sameStrategy(item, value));
+  }
+
+  bool _isDefaultStrategy(String value) {
+    return _defaultStrategySuggestions.any((item) => _sameStrategy(item, value));
+  }
+
+  Future<void> _persistCustomStrategies() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final custom = _strategySuggestions
+        .where((item) => !_isDefaultStrategy(item))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    await prefs.setStringList(_strategyPrefsKey, custom);
+  }
+
+  Future<void> _loadStrategySuggestions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_strategyPrefsKey) ?? const [];
+
+    final merged = <String>[..._defaultStrategySuggestions];
+
+    for (final raw in saved) {
+      final value = raw.trim();
+      if (value.isEmpty) continue;
+      if (!_containsStrategy(merged, value)) {
+        merged.add(value);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _strategySuggestions = merged);
+  }
+
+  Future<void> _addCurrentStrategyToQuickPick() async {
+    final s = S.read(context);
+    final value = _strategyCtrl.text.trim();
+
+    if (value.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            s.isVi
+                ? 'Nhập tên chiến lược trước khi lưu quick pick.'
+                : 'Enter a strategy name before saving quick pick.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (_containsStrategy(_strategySuggestions, value)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            s.isVi
+                ? 'Chiến lược này đã có trong quick pick.'
+                : 'This strategy is already in quick pick.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _strategySuggestions.add(value);
+    });
+
+    await _persistCustomStrategies();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          s.isVi
+              ? 'Đã lưu "$value" vào quick pick.'
+              : 'Saved "$value" to quick pick.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _removeStrategyQuickPick(String value) async {
+    if (_isDefaultStrategy(value)) return;
+
+    setState(() {
+      _strategySuggestions.removeWhere((item) => _sameStrategy(item, value));
+    });
+
+    await _persistCustomStrategies();
+  }
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -171,11 +281,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   String _fmt2(int v) => v.toString().padLeft(2, '0');
 
   double? _parse(String text) => double.tryParse(text.trim());
+
   double _parseOptionalFee() {
     final text = _feeCtrl.text.trim();
     if (text.isEmpty) return 0.0;
     return double.tryParse(text) ?? 0.0;
   }
+
   void _showChecklistGuide() {
     final s = S.read(context);
 
@@ -184,7 +296,8 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       showDragHandle: true,
       isScrollControlled: true,
       builder: (sheetContext) {
-        final primary = Theme.of(sheetContext).colorScheme.primary;
+        final theme = Theme.of(sheetContext);
+        final primary = theme.colorScheme.primary;
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -194,9 +307,9 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
               children: [
                 Text(
                   s.isVi ? 'Cách dùng checklist' : 'How to use the checklist',
-                  style: const TextStyle(
-                    fontSize: 20,
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -204,10 +317,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                   s.isVi
                       ? 'Checklist này không dùng để đoán lệnh thắng hay thua. Nó dùng để đánh giá chất lượng quyết định và phân loại lệnh A / A- / B.'
                       : 'This checklist is not used to predict whether a trade will win or lose. It is used to evaluate decision quality and classify trades as A / A- / B.',
-                  style: const TextStyle(height: 1.45),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    height: 1.45,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 18),
-
                 _GuideItem(
                   title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
                   body: s.isVi
@@ -238,14 +354,16 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       ? 'Lệnh không bị thúc đẩy bởi FOMO, revenge trade, overtrade hoặc phá kỷ luật. Bạn vào lệnh vì setup, không phải vì cảm xúc.'
                       : 'The trade is not driven by FOMO, revenge trading, overtrading, or discipline breaks. You enter because of the setup, not emotion.',
                 ),
-
                 const SizedBox(height: 10),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    color: primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(18),
+                    color: primary.withOpacity(0.10),
+                    border: Border.all(
+                      color: primary.withOpacity(0.18),
+                    ),
                   ),
                   child: Text(
                     s.isVi
@@ -253,7 +371,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                         : 'A = all key criteria are valid\nA- = one non-critical issue\nB = invalid context, invalid risk, emotional discipline break, or 2+ failed criteria',
                     style: TextStyle(
                       color: primary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                       height: 1.35,
                     ),
                   ),
@@ -265,6 +383,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       },
     );
   }
+
   double? _previewR() {
     final entry = _parse(_entryCtrl.text);
     final sl = _parse(_stopLossCtrl.text);
@@ -275,8 +394,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     final risk = _dir == TradeDirection.long ? (entry - sl) : (sl - entry);
     if (risk == 0) return null;
 
-    final reward =
-    _dir == TradeDirection.long ? (exit - entry) : (entry - exit);
+    final reward = _dir == TradeDirection.long ? (exit - entry) : (entry - exit);
     return reward / risk;
   }
 
@@ -328,7 +446,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _dateTime = DateTime.now();
         _market = Market.forex;
         _dir = TradeDirection.long;
-        _strategyCtrl.text = 'Wyckoff';
+        _strategyCtrl.clear();
         _symbolCtrl.clear();
         _entryCtrl.clear();
         _stopLossCtrl.clear();
@@ -363,7 +481,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: FilledButton.icon(
           onPressed: _submit,
-          icon: const Icon(Icons.save_outlined),
+          icon: const Icon(Icons.save_rounded),
           label: Text(widget.isEdit ? s.updateTrade : s.saveTrade),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -376,96 +494,38 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 150),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 150),
           children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Theme.of(context).cardColor,
-                border: Border.all(color: Colors.black12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: gradeColor.withOpacity(0.15),
-                    child: Text(
-                      grade.label,
-                      style: TextStyle(
-                        color: gradeColor,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          s.currentGrade,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          grade.shortWhy,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          s.basedOnChecklist,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _GradePreviewCard(
+              grade: grade,
+              gradeColor: gradeColor,
+              title: s.currentGrade,
+              reason: grade.shortWhy,
+              subtitle: s.basedOnChecklist,
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.basicInfo,
+              icon: Icons.event_note_rounded,
               child: Column(
                 children: [
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickDate,
-                          icon: const Icon(Icons.calendar_today_outlined),
-                          label: Text(
-                            '${s.dateLabel}: ${_dateTime.year}-${_fmt2(_dateTime.month)}-${_fmt2(_dateTime.day)}',
-                          ),
+                        child: _DateTimeButton(
+                          icon: Icons.calendar_today_rounded,
+                          label:
+                          '${s.dateLabel}: ${_dateTime.year}-${_fmt2(_dateTime.month)}-${_fmt2(_dateTime.day)}',
+                          onTap: _pickDate,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _pickTime,
-                          icon: const Icon(Icons.schedule_outlined),
-                          label: Text(
-                            '${s.timeLabel}: ${_fmt2(_dateTime.hour)}:${_fmt2(_dateTime.minute)}',
-                          ),
+                        child: _DateTimeButton(
+                          icon: Icons.schedule_rounded,
+                          label:
+                          '${s.timeLabel}: ${_fmt2(_dateTime.hour)}:${_fmt2(_dateTime.minute)}',
+                          onTap: _pickTime,
                         ),
                       ),
                     ],
@@ -473,9 +533,9 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                   const SizedBox(height: 14),
                   DropdownButtonFormField<Market>(
                     value: _market,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: s.market,
-                      border: const OutlineInputBorder(),
                     ),
                     items: Market.values
                         .map(
@@ -498,10 +558,12 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       segments: [
                         ButtonSegment<TradeDirection>(
                           value: TradeDirection.long,
+                          icon: const Icon(Icons.north_east_rounded),
                           label: Text(s.longLabel),
                         ),
                         ButtonSegment<TradeDirection>(
                           value: TradeDirection.short,
+                          icon: const Icon(Icons.south_east_rounded),
                           label: Text(s.shortLabel),
                         ),
                       ],
@@ -514,11 +576,10 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.setupInfo,
+              icon: Icons.auto_graph_rounded,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -526,8 +587,9 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     controller: _strategyCtrl,
                     decoration: InputDecoration(
                       labelText: s.primaryStrategy,
-                      hintText: s.strategyHint,
-                      border: const OutlineInputBorder(),
+                      hintText: s.isVi
+                          ? 'Ví dụ: Price Action, SMC, Wyckoff...'
+                          : 'Example: Price Action, SMC, Wyckoff...',
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return s.requiredField;
@@ -535,32 +597,43 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    s.quickPick,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  _MutedText(text: s.quickPick),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: _strategySuggestions.map((strategy) {
-                      final selected =
-                          _strategyCtrl.text.trim().toLowerCase() ==
-                              strategy.toLowerCase();
+                      final selected = _strategyCtrl.text.trim().toLowerCase() ==
+                          strategy.toLowerCase();
+                      final isDefault = _isDefaultStrategy(strategy);
 
-                      return ChoiceChip(
+                      return InputChip(
                         label: Text(strategy),
                         selected: selected,
-                        onSelected: (_) {
+                        onPressed: () {
                           setState(() {
                             _strategyCtrl.text = strategy;
                           });
                         },
+                        onDeleted: isDefault
+                            ? null
+                            : () {
+                          _removeStrategyQuickPick(strategy);
+                        },
+                        deleteIcon: const Icon(Icons.close_rounded, size: 16),
                       );
                     }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _addCurrentStrategyToQuickPick,
+                      icon: const Icon(Icons.add_rounded),
+                      label: Text(
+                        s.isVi ? 'Lưu quick pick' : 'Save quick pick',
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -568,7 +641,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     decoration: InputDecoration(
                       labelText: s.pairSymbol,
                       hintText: s.pairHint,
-                      border: const OutlineInputBorder(),
                     ),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return s.requiredField;
@@ -578,11 +650,10 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.pricePlan,
+              icon: Icons.query_stats_rounded,
               child: Column(
                 children: [
                   TextFormField(
@@ -591,7 +662,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: s.entry,
-                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
@@ -606,7 +676,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: s.stopLoss,
-                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
@@ -621,7 +690,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: s.exit,
-                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (_) => setState(() {}),
                     validator: (v) {
@@ -632,65 +700,38 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _feeCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
                       labelText: s.isVi ? 'Phí giao dịch' : 'Fee',
                       hintText: s.isVi
                           ? 'Không bắt buộc: commission, funding, swap...'
                           : 'Optional: commission, funding, swap...',
-                      border: const OutlineInputBorder(),
                     ),
                     validator: (v) {
                       final text = (v ?? '').trim();
                       if (text.isEmpty) return null;
                       if (_parse(text) == null) return s.numberField;
                       if ((_parse(text) ?? 0) < 0) {
-                        return s.isVi ? 'Phí không được âm' : 'Fee cannot be negative';
+                        return s.isVi
+                            ? 'Phí không được âm'
+                            : 'Fee cannot be negative';
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: Colors.black.withOpacity(0.03),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.query_stats_outlined),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            s.autoR,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        Text(
-                          previewR == null ? '—' : previewR.toStringAsFixed(2),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                            color: previewR == null
-                                ? Colors.grey.shade700
-                                : (previewR >= 0 ? Colors.green : Colors.red),
-                          ),
-                        ),
-                      ],
-                    ),
+                  _PreviewRCard(
+                    label: s.autoR,
+                    value: previewR,
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.chartsAndNotes,
+              icon: Icons.image_rounded,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -707,53 +748,33 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     decoration: InputDecoration(
                       labelText: s.note,
                       hintText: s.noteHint,
-                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    s.afterChartLater,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12.5,
-                    ),
-                  ),
+                  _MutedText(text: s.afterChartLater),
                 ],
               ),
             ),
-
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 14),
             _SectionCard(
               title: s.decisionChecklist,
+              icon: Icons.fact_check_rounded,
+              trailing: IconButton(
+                tooltip: s.isVi ? 'Cách dùng checklist' : 'How to use checklist',
+                onPressed: _showChecklistGuide,
+                icon: const Icon(Icons.info_outline_rounded),
+              ),
               child: Column(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          s.isVi
-                              ? 'Dùng để phân loại chất lượng lệnh A / A- / B'
-                              : 'Used to classify trade quality: A / A- / B',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w600,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: s.isVi ? 'Cách dùng checklist' : 'How to use checklist',
-                        onPressed: () {
-                          _showChecklistGuide();
-                        },
-                        icon: const Icon(Icons.info_outline),
-                      ),
-                    ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _MutedText(
+                      text: s.isVi
+                          ? 'Dùng để phân loại chất lượng lệnh A / A- / B'
+                          : 'Used to classify trade quality: A / A- / B',
+                    ),
                   ),
-                  const SizedBox(height: 10),
-
+                  const SizedBox(height: 12),
                   _ChecklistTile(
                     title: s.isVi ? 'Bối cảnh đúng' : 'Market context valid',
                     subtitle: s.isVi
@@ -765,7 +786,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 10),
-
                   _ChecklistTile(
                     title: s.isVi ? 'Vùng vào hợp lệ' : 'Entry zone valid',
                     subtitle: s.isVi
@@ -777,7 +797,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 10),
-
                   _ChecklistTile(
                     title: s.isVi ? 'Execution đúng' : 'Execution valid',
                     subtitle: s.isVi
@@ -789,7 +808,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 10),
-
                   _ChecklistTile(
                     title: s.isVi ? 'Risk đúng' : 'Risk valid',
                     subtitle: s.isVi
@@ -801,7 +819,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 10),
-
                   _ChecklistTile(
                     title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',
                     subtitle: s.isVi
@@ -815,8 +832,6 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                 ],
               ),
             ),
-
-            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -835,43 +850,312 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
+class _GradePreviewCard extends StatelessWidget {
+  final TradeGrade grade;
+  final Color gradeColor;
   final String title;
-  final Widget child;
+  final String reason;
+  final String subtitle;
 
-  const _SectionCard({
+  const _GradePreviewCard({
+    required this.grade,
+    required this.gradeColor,
     required this.title,
-    required this.child,
+    required this.reason,
+    required this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: Theme.of(context).cardColor,
-        border: Border.all(color: Colors.black12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 5),
+    final theme = Theme.of(context);
+
+    return _ProCard(
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: gradeColor.withOpacity(0.15),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: gradeColor.withOpacity(0.25),
+              ),
+            ),
+            child: Text(
+              grade.label,
+              style: TextStyle(
+                color: gradeColor,
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  reason,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _ProCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF111827) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.black.withOpacity(0.06),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.055),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final Widget? trailing;
+
+  const _SectionCard({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _ProCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              _IconBubble(icon: icon),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
           ),
           const SizedBox(height: 14),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+class _IconBubble extends StatelessWidget {
+  final IconData icon;
+
+  const _IconBubble({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: primary.withOpacity(0.11),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: primary.withOpacity(0.18),
+        ),
+      ),
+      child: Icon(
+        icon,
+        color: primary,
+        size: 20,
+      ),
+    );
+  }
+}
+
+class _MutedText extends StatelessWidget {
+  final String text;
+
+  const _MutedText({
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Text(
+      text,
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
+        height: 1.35,
+      ),
+    );
+  }
+}
+
+class _DateTimeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DateTimeButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(
+        label,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: theme.colorScheme.onSurface,
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.7),
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 13,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewRCard extends StatelessWidget {
+  final String label;
+  final double? value;
+
+  const _PreviewRCard({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final display = value == null ? '—' : value!.toStringAsFixed(2);
+    final color = value == null
+        ? theme.colorScheme.onSurfaceVariant
+        : value! >= 0
+        ? Colors.green
+        : Colors.red;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: theme.colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.32 : 0.75,
+        ),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.38),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.query_stats_rounded,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            display,
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: -0.4,
+            ),
+          ),
         ],
       ),
     );
@@ -893,12 +1177,20 @@ class _ChecklistTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = value ? Colors.green : Colors.grey.shade500;
+    final theme = Theme.of(context);
+    final activeColor = value ? Colors.green : theme.colorScheme.onSurfaceVariant;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: Colors.black.withOpacity(0.03),
+        color: theme.colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark ? 0.32 : 0.75,
+        ),
+        border: Border.all(
+          color: value
+              ? Colors.green.withOpacity(0.20)
+              : theme.colorScheme.outlineVariant.withOpacity(0.38),
+        ),
       ),
       child: SwitchListTile(
         value: value,
@@ -906,17 +1198,23 @@ class _ChecklistTile extends StatelessWidget {
         activeColor: Colors.green,
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.only(top: 3),
           child: Text(
             subtitle,
-            style: TextStyle(color: Colors.grey.shade600),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+              height: 1.3,
+            ),
           ),
         ),
         secondary: Icon(
-          value ? Icons.check_circle : Icons.radio_button_unchecked,
+          value ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
           color: activeColor,
         ),
         shape: RoundedRectangleBorder(
@@ -933,8 +1231,6 @@ class _ImagePickerCard extends StatelessWidget {
   final String? imagePath;
   final VoidCallback onTap;
 
-
-
   const _ImagePickerCard({
     required this.title,
     required this.subtitle,
@@ -945,15 +1241,21 @@ class _ImagePickerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasImage = imagePath != null && imagePath!.isNotEmpty;
+    final theme = Theme.of(context);
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: onTap,
       child: Container(
-        height: 130,
+        height: 132,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: Colors.black.withOpacity(0.03),
+          color: theme.colorScheme.surface.withOpacity(
+            theme.brightness == Brightness.dark ? 0.32 : 0.75,
+          ),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withOpacity(0.38),
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: hasImage
@@ -974,12 +1276,15 @@ class _ImagePickerCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black.withOpacity(0.62),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   title,
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -991,22 +1296,27 @@ class _ImagePickerCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.add_photo_alternate_outlined,
+                Icon(
+                  Icons.add_photo_alternate_rounded,
                   size: 36,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 10),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
@@ -1016,6 +1326,7 @@ class _ImagePickerCard extends StatelessWidget {
     );
   }
 }
+
 class _GuideItem extends StatelessWidget {
   final String title;
   final String body;
@@ -1027,6 +1338,8 @@ class _GuideItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -1034,17 +1347,17 @@ class _GuideItem extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w900,
-              fontSize: 15.5,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             body,
-            style: TextStyle(
-              color: Colors.grey.shade700,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
               height: 1.4,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
