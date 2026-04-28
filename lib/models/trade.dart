@@ -232,7 +232,7 @@ class Trade {
     return Trade(
       dateTime: DateTime.parse(json['dateTime']),
       market: Market.values.byName(json['market']),
-      strategy: (json['strategy'] ?? 'General').toString(),
+      strategy: (json['strategy'] ?? '').toString(),
       symbol: json['symbol'],
       direction: TradeDirection.values.byName(json['direction']),
       entry: (json['entry'] as num).toDouble(),

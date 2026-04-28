@@ -83,7 +83,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _entryCtrl.text = t.entry.toString();
       _stopLossCtrl.text = t.stopLoss.toString();
       _exitCtrl.text = t.exit.toString();
-      _riskUsedCtrl.text = _formatRiskUsed(t.riskUsed);
+      _riskUsedCtrl.text = t.riskUsed == 1.0 ? '' : _formatRiskUsed(t.riskUsed);
       _feeCtrl.text = t.fee == 0 ? '' : t.fee.toString();
       _noteCtrl.text = t.note ?? '';
 
@@ -94,8 +94,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       _dateTime = DateTime.now();
       _market = Market.forex;
       _dir = TradeDirection.long;
-      _riskUsedCtrl.text = '0.75';
-
+      _riskUsedCtrl.clear();
     }
     _strategyCtrl.addListener(_onStrategyTextChanged);
     _loadStrategySuggestions();
@@ -311,15 +310,22 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   }
 
   double _parseRiskUsed() {
-    final value = _parseRiskUsedText(_riskUsedCtrl.text);
+    final text = _riskUsedCtrl.text.trim();
+    if (text.isEmpty) return 1.0;
+
+    final value = _parseRiskUsedText(text);
     if (value == null || value <= 0) return 1.0;
+
     return value;
   }
 
   Widget _riskQuickPick(double value) {
     final theme = Theme.of(context);
     final primary = theme.colorScheme.primary;
-    final selected = _riskUsedCtrl.text.trim() == _formatRiskUsed(value);
+    final raw = _riskUsedCtrl.text.trim();
+    final selected = raw.isEmpty
+        ? value == 1.0
+        : raw == _formatRiskUsed(value);
 
     return ChoiceChip(
       label: Text('${_formatRiskUsed(value)}R'),
@@ -510,7 +516,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _entryCtrl.clear();
         _stopLossCtrl.clear();
         _exitCtrl.clear();
-        _riskUsedCtrl.text = '0.75';
+        _riskUsedCtrl.clear();
         _feeCtrl.clear();
         _noteCtrl.clear();
         _beforeImagePath = null;
@@ -671,15 +677,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                   TextFormField(
                     controller: _strategyCtrl,
                     decoration: InputDecoration(
-                      labelText: s.primaryStrategy,
+                      labelText: s.isVi
+                          ? 'Chiến lược chính (tuỳ chọn)'
+                          : 'Primary strategy (optional)',
                       hintText: s.isVi
                           ? 'Ví dụ: Price Action, SMC, Wyckoff...'
                           : 'Example: Price Action, SMC, Wyckoff...',
                     ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return s.requiredField;
-                      return null;
-                    },
                   ),
                   const SizedBox(height: 10),
                   _MutedText(text: s.quickPick),
@@ -842,29 +846,33 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     controller: _riskUsedCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: s.isVi ? 'Risk lệnh này' : 'Risk used',
+                      labelText: s.isVi ? 'Risk lệnh này (tuỳ chọn)' : 'Risk used (optional)',
                       hintText: s.isVi
-                          ? 'Ví dụ: 0.75 nghĩa là dùng 0.75R'
-                          : 'Example: 0.75 means this trade used 0.75R',
+                          ? 'Để trống = 1R'
+                          : 'Leave blank = 1R',
                       helperText: s.isVi
                           ? 'Gợi ý theo grade hiện tại: ${_formatRiskUsed(suggestedRisk)}R'
                           : 'Suggested for current grade: ${_formatRiskUsed(suggestedRisk)}R',
                       helperStyle: TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? Colors.white70
-                            : Colors.black87,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    onChanged: (_) => setState(() {}),
                     validator: (v) {
-                      final value = _parseRiskUsedText(v ?? '');
+                      final text = (v ?? '').trim();
+                      if (text.isEmpty) return null;
+
+                      final value = _parseRiskUsedText(text);
                       if (value == null) return s.numberField;
+
                       if (value <= 0) {
                         return s.isVi
                             ? 'Risk phải lớn hơn 0'
                             : 'Risk must be greater than 0';
                       }
+
                       return null;
                     },
                   ),
