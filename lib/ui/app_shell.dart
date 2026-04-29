@@ -18,7 +18,7 @@ class _AppShellState extends State<AppShell> {
   int idx = 0;
 
   bool get _showAddFab {
-    return idx == 0 || idx == 1;
+    return idx == 0;
   }
 
   @override
