@@ -338,7 +338,7 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
 
     final settings = context.read<AppSettings>();
     final cashPerR = settings.cashPerR;
-    final riskUsed = cashPerR > 0 ? result.riskMoney / cashPerR : 1.0;
+    final riskUsed = cashPerR > 0 ? result.actualRisk / cashPerR : 1.0;
 
     setState(() {
       _symbolCtrl.text = result.symbol;
