@@ -489,8 +489,8 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                 _GuideItem(
                   title: s.isVi ? 'Risk đúng' : 'Risk valid',
                   body: s.isVi
-                      ? 'Lệnh tuân thủ quy tắc rủi ro: đúng size, stop loss hợp lý, R:R đạt mức tối thiểu, không tăng size để gỡ, không vi phạm giới hạn rủi ro ngày/tuần.'
-                      : 'The trade respects your risk rules: correct size, valid stop loss, minimum R:R, no revenge sizing, and no daily/weekly risk limit violation.',
+                      ? 'Lệnh tuân thủ quy tắc rủi ro của bạn: đúng size, stop loss hợp lý, R:R đạt mức tối thiểu theo kế hoạch, không tăng size để gỡ, không vi phạm giới hạn rủi ro ngày/tuần.'
+                      : 'The trade respects your own risk rules: correct size, valid stop loss, minimum R:R according to your plan, no revenge sizing, and no daily/weekly risk limit violation.',
                 ),
                 _GuideItem(
                   title: s.isVi ? 'Kỷ luật cảm xúc' : 'Emotional discipline',

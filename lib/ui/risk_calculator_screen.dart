@@ -812,6 +812,88 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     return 'Updated ${_formatDateTime(rates.fetchedAt)}';
   }
 
+  void _showBrokerProfileGuide() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _tr(
+                    context,
+                    'How broker profiles work',
+                    'Cách dùng broker / nền tảng',
+                  ),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _tr(
+                    context,
+                    'A broker/platform profile stores symbol specifications used to calculate position size. App Default is enough for quick estimates.',
+                    'Broker / nền tảng lưu thông số symbol dùng để tính khối lượng vào lệnh. App Default là đủ để tính nhanh.',
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _tr(
+                    context,
+                    'For more accurate sizing, create your own profile using the values from MT5 → Symbol Specification or your broker contract details.',
+                    'Để tính chính xác hơn, hãy tạo profile riêng bằng thông số trong MT5 → Symbol Specification hoặc contract details của broker.',
+                  ),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.45,
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.18),
+                    ),
+                  ),
+                  child: Text(
+                    _tr(
+                      context,
+                      'Tip: If you are not sure, keep App Default and verify volume with your broker before trading.',
+                      'Gợi ý: Nếu chưa chắc, cứ dùng App Default và kiểm tra lại volume với broker trước khi vào lệnh.',
+                    ),
+                    style: TextStyle(
+                      color: theme.colorScheme.primary,
+                      height: 1.35,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _showCustomProfileSheet({
     BrokerProfile? addSymbolToProfile,
   }) async {
@@ -1210,21 +1292,42 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                 },
               ),
               const SizedBox(height: 8),
-              Text(
-                _selectedProfile.isDefault
-                    ? _tr(
-                  context,
-                  'Using app default specs. You can create your own broker profile below.',
-                  'Đang dùng thông số mặc định của app. Bạn có thể thêm broker/nền tảng riêng bên dưới.',
-                )
-                    : _tr(
-                  context,
-                  'Using saved custom specs for ${_selectedProfile.name}.',
-                  'Đang dùng thông số đã lưu cho ${_selectedProfile.name}.',
-                ),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
+              InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: _showBrokerProfileGuide,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedProfile.isDefault
+                              ? _tr(
+                            context,
+                            'Using app default specs. Tap to learn when to create your own broker profile.',
+                            'Đang dùng thông số mặc định. Bấm để xem khi nào cần tạo broker/nền tảng riêng.',
+                          )
+                              : _tr(
+                            context,
+                            'Using saved custom specs for ${_selectedProfile.name}.',
+                            'Đang dùng thông số đã lưu cho ${_selectedProfile.name}.',
+                          ),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
