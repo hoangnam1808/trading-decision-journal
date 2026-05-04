@@ -179,7 +179,7 @@ class TradeDetailScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
           _HeroTradeCard(
             trade: currentTrade,
@@ -219,14 +219,14 @@ class TradeDetailScreen extends StatelessWidget {
           if (hasPositionSizing) ...[
             const SizedBox(height: 14),
             _SectionCard(
-              title: s.isVi ? 'Position sizing' : 'Position sizing',
+              title: 'Position sizing',
               icon: Icons.calculate_rounded,
               child: Wrap(
                 spacing: 10,
                 runSpacing: 10,
                 children: [
                   _DetailStat(
-                    label: s.isVi ? 'Volume' : 'Volume',
+                    label: 'Volume',
                     value: _formatDetailNumber(currentTrade.plannedVolume),
                   ),
                   _DetailStat(
@@ -244,7 +244,7 @@ class TradeDetailScreen extends StatelessWidget {
                     ),
                   ),
                   _DetailStat(
-                    label: s.isVi ? 'Profile' : 'Profile',
+                    label: 'Profile',
                     value: (currentTrade.riskCalculatorProfile ?? '').trim().isEmpty
                         ? '—'
                         : currentTrade.riskCalculatorProfile!,
@@ -258,7 +258,6 @@ class TradeDetailScreen extends StatelessWidget {
 
           _SectionCard(
             title: s.decisionChecklist,
-
             icon: Icons.fact_check_rounded,
             child: Column(
               children: [
@@ -347,46 +346,50 @@ class TradeDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          const SizedBox(height: 18),
-
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _openEdit(context, currentTrade, storeIndex),
-                  icon: const Icon(Icons.edit_rounded),
-                  label: Text(s.editTrade),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () =>
-                      _pickAfterImage(context, currentTrade, storeIndex),
-                  icon: const Icon(Icons.add_photo_alternate_rounded),
-                  label: Text(
-                    currentTrade.afterImagePath?.isNotEmpty ?? false
-                        ? s.replaceLabel
-                        : s.afterChartTitle,
-                  ),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ],
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _openEdit(context, currentTrade, storeIndex),
+                icon: const Icon(Icons.edit_rounded),
+                label: Text(s.editTrade),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => _pickAfterImage(
+                  context,
+                  currentTrade,
+                  storeIndex,
+                ),
+                icon: const Icon(Icons.add_photo_alternate_rounded),
+                label: Text(
+                  currentTrade.afterImagePath?.isNotEmpty ?? false
+                      ? s.replaceLabel
+                      : s.afterChartTitle,
+                ),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
