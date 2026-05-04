@@ -740,26 +740,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     },
                   ),
                   const SizedBox(height: 14),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: SegmentedButton<TradeDirection>(
-                      segments: [
-                        ButtonSegment<TradeDirection>(
-                          value: TradeDirection.long,
-                          icon: const Icon(Icons.north_east_rounded),
-                          label: Text(s.longLabel),
-                        ),
-                        ButtonSegment<TradeDirection>(
-                          value: TradeDirection.short,
-                          icon: const Icon(Icons.south_east_rounded),
-                          label: Text(s.shortLabel),
-                        ),
-                      ],
-                      selected: {_dir},
-                      onSelectionChanged: (selection) {
-                        setState(() => _dir = selection.first);
-                      },
-                    ),
+                  _DirectionToggle(
+                    value: _dir,
+                    longLabel: s.longLabel,
+                    shortLabel: s.shortLabel,
+                    onChanged: (value) {
+                      setState(() => _dir = value);
+                    },
                   ),
                 ],
               ),
@@ -1185,6 +1172,137 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       case TradeGrade.b:
         return Colors.red;
     }
+  }
+}
+
+class _DirectionToggle extends StatelessWidget {
+  final TradeDirection value;
+  final String longLabel;
+  final String shortLabel;
+  final ValueChanged<TradeDirection> onChanged;
+
+  const _DirectionToggle({
+    required this.value,
+    required this.longLabel,
+    required this.shortLabel,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(isDark ? 0.32 : 0.75),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withOpacity(0.50),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _DirectionOption(
+              selected: value == TradeDirection.long,
+              label: longLabel,
+              icon: Icons.north_east_rounded,
+              color: const Color(0xFF22C55E),
+              onTap: () => onChanged(TradeDirection.long),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _DirectionOption(
+              selected: value == TradeDirection.short,
+              label: shortLabel,
+              icon: Icons.south_east_rounded,
+              color: const Color(0xFFEF4444),
+              onTap: () => onChanged(TradeDirection.short),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DirectionOption extends StatelessWidget {
+  final bool selected;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _DirectionOption({
+    required this.selected,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor = selected
+        ? color.withOpacity(isDark ? 0.22 : 0.13)
+        : Colors.transparent;
+
+    final borderColor = selected
+        ? color.withOpacity(isDark ? 0.46 : 0.30)
+        : Colors.transparent;
+
+    final contentColor = selected ? color : theme.colorScheme.onSurfaceVariant;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: borderColor,
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                selected ? Icons.check_rounded : icon,
+                size: 19,
+                color: contentColor,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: contentColor,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
