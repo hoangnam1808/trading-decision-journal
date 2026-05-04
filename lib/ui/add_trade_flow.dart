@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../state/app_settings.dart';
+import 'risk_calculator_screen.dart';
 
 import '../l10n/strings.dart';
 import '../models/trade.dart';
@@ -293,15 +295,67 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   String _formatRiskUsed(double value) {
     return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
   }
+  String _formatCalculatorNumber(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+
+    return value
+        .toStringAsFixed(8)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+  Future<void> _openRiskCalculator() async {
+    final result = await Navigator.of(context).push<RiskCalculatorFillResult>(
+      MaterialPageRoute(
+        builder: (_) => const RiskCalculatorScreen(
+          returnResultOnUse: true,
+        ),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final settings = context.read<AppSettings>();
+    final cashPerR = settings.cashPerR;
+    final riskUsed = cashPerR > 0 ? result.riskMoney / cashPerR : 1.0;
+
+    setState(() {
+      _symbolCtrl.text = result.symbol;
+      _entryCtrl.text = _formatCalculatorNumber(result.entry);
+      _stopLossCtrl.text = _formatCalculatorNumber(result.stopLoss);
+
+      if (result.target != null) {
+        _exitCtrl.text = _formatCalculatorNumber(result.target!);
+      }
+
+      if (riskUsed > 0) {
+        _riskUsedCtrl.text = _formatRiskUsed(riskUsed);
+      }
+    });
+
+    final s = S.read(context);
+    final volumeText = _formatCalculatorNumber(result.suggestedVolume);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          s.isVi
+              ? 'Đã áp dụng từ máy tính 1R. Volume gợi ý: $volumeText'
+              : 'Applied from 1R Calculator. Suggested volume: $volumeText',
+        ),
+      ),
+    );
+  }
 
   double _suggestedRiskForGrade(TradeGrade grade) {
     switch (grade) {
       case TradeGrade.a:
-        return 0.75;
+        return 1.00;
       case TradeGrade.aMinus:
-        return 0.50;
+        return 0.75;
       case TradeGrade.b:
-        return 0.25;
+        return 0.50;
     }
   }
 
@@ -564,6 +618,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
     final suggestedRisk = _suggestedRiskForGrade(grade);
     final gradeColor = _gradeColor(grade);
 
+    final cashPerR = context.watch<AppSettings>().cashPerR;
+    final cashPerRText = s.isVi
+        ? '${_formatCalculatorNumber(cashPerR)}\$'
+        : '\$${_formatCalculatorNumber(cashPerR)}';
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEdit ? s.editTrade : s.addTrade),
@@ -777,6 +836,27 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
               icon: Icons.query_stats_rounded,
               child: Column(
                 children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _openRiskCalculator,
+                      icon: const Icon(Icons.calculate_rounded),
+                      label: Text(
+                        s.isVi ? 'Mở máy tính 1R' : 'Open 1R Calculator',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   TextFormField(
                     controller: _entryCtrl,
                     keyboardType:
@@ -846,13 +926,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     controller: _riskUsedCtrl,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: InputDecoration(
-                      labelText: s.isVi ? 'Risk lệnh này (tuỳ chọn)' : 'Risk used (optional)',
+                      labelText: s.isVi ? 'Risk theo 1R mặc định' : 'Risk vs default 1R',
                       hintText: s.isVi
                           ? 'Để trống = 1R'
                           : 'Leave blank = 1R',
                       helperText: s.isVi
-                          ? 'Gợi ý theo grade hiện tại: ${_formatRiskUsed(suggestedRisk)}R'
-                          : 'Suggested for current grade: ${_formatRiskUsed(suggestedRisk)}R',
+                          ? '1R mặc định hiện tại: $cashPerRText. Gợi ý theo grade: ${_formatRiskUsed(suggestedRisk)}R'
+                          : 'Current default 1R: $cashPerRText. Suggested by grade: ${_formatRiskUsed(suggestedRisk)}R',
                       helperStyle: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'risk_calculator_screen.dart';
 import '../l10n/strings.dart';
 import '../state/app_settings.dart';
 import '../reports/export_report_sheet.dart';
@@ -162,6 +162,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
+        ),
+
+        const SizedBox(height: 12),
+
+        _RiskCalculatorCard(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const RiskCalculatorScreen(
+                  returnResultOnUse: false,
+                ),
+              ),
+            );
+          },
         ),
 
         const SizedBox(height: 12),
@@ -402,6 +416,56 @@ class _IconBubble extends StatelessWidget {
         icon,
         color: primary,
         size: 22,
+      ),
+    );
+  }
+}
+
+class _RiskCalculatorCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _RiskCalculatorCard({
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final theme = Theme.of(context);
+
+    return _ProCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardTitleRow(
+            icon: Icons.calculate_rounded,
+            title: s.isVi ? 'Máy tính 1R' : '1R Calculator',
+            subtitle: s.isVi
+                ? 'Tính khối lượng vào lệnh từ tài khoản, mức rủi ro, entry và stop loss.'
+                : 'Calculate position size using account size, planned risk, entry, and stop loss.',
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onTap,
+              icon: const Icon(Icons.open_in_new_rounded),
+              label: Text(s.isVi ? 'Mở máy tính 1R' : 'Open 1R Calculator'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            s.isVi
+                ? 'Lên khối lượng theo rủi ro dự kiến. Phù hợp với nhiều phong cách giao dịch khác nhau.'
+                : 'Plan position size from your intended risk. Designed to support different trading styles.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
