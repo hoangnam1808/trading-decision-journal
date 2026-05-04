@@ -659,7 +659,13 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     }
 
     if (entry <= 0 || stop <= 0) {
-      return _empty(error: 'Enter both entry and stop loss.');
+      return _empty(
+        error: _tr(
+          context,
+          'Enter both entry and stop loss to calculate volume.',
+          'Nhập Entry và Stop loss để tính volume.',
+        ),
+      );
     }
 
     final slDistance = (entry - stop).abs();
@@ -788,28 +794,44 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     return '$d/$m/$y $h:$min';
   }
 
-  String _rateStatusText() {
+  String _rateStatusText(BuildContext context) {
     final rates = _rates;
 
     if (_isRefreshingRates && rates == null) {
-      return 'Updating rates...';
+      return _tr(context, 'Updating rates...', 'Đang cập nhật tỷ giá...');
     }
 
     if (rates == null) {
-      return 'Using built-in rate estimates';
+      return _tr(
+        context,
+        'Using built-in rate estimates',
+        'Đang dùng tỷ giá ước tính',
+      );
     }
 
     if (rates.rateDate == 'built_in_estimate') {
       return _isRefreshingRates
-          ? 'Updating rates...'
-          : 'Using built-in rate estimates';
+          ? _tr(context, 'Updating rates...', 'Đang cập nhật tỷ giá...')
+          : _tr(
+        context,
+        'Using built-in rate estimates',
+        'Đang dùng tỷ giá ước tính',
+      );
     }
 
     if (rates.isStale) {
-      return 'Using saved rates from ${_formatDateTime(rates.fetchedAt)}';
+      return _tr(
+        context,
+        'Using saved rates from ${_formatDateTime(rates.fetchedAt)}',
+        'Đang dùng tỷ giá đã lưu từ ${_formatDateTime(rates.fetchedAt)}',
+      );
     }
 
-    return 'Updated ${_formatDateTime(rates.fetchedAt)}';
+    return _tr(
+      context,
+      'Updated ${_formatDateTime(rates.fetchedAt)}',
+      'Đã cập nhật ${_formatDateTime(rates.fetchedAt)}',
+    );
   }
 
   void _showBrokerProfileGuide() {
@@ -1494,9 +1516,17 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     String conversionText;
 
     if (_profitCurrency == _selectedProfile.accountCurrency) {
-      conversionText = 'No currency conversion needed.';
+      conversionText = _tr(
+        context,
+        'No currency conversion needed.',
+        'Không cần quy đổi tiền tệ.',
+      );
     } else if (conversionRate == null) {
-      conversionText = 'Conversion handled automatically when rates are available.';
+      conversionText = _tr(
+        context,
+        'Conversion handled automatically when rates are available.',
+        'App sẽ tự quy đổi khi có tỷ giá.',
+      );
     } else {
       conversionText =
       '1 $_profitCurrency ≈ ${_formatMoney(conversionRate, _selectedProfile.accountCurrency)}';
@@ -1604,7 +1634,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                       Text(_tr(context, 'Exchange rates', 'Tỷ giá')),
                       const SizedBox(height: 3),
                       Text(
-                        _rateStatusText(),
+                        _rateStatusText(context),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,

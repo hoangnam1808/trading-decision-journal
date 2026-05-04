@@ -271,7 +271,7 @@ class _HeroSummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isVi ? 'Kết quả kỳ lọc' : 'Period result',
+                  isVi ? 'Hiệu suất theo bộ lọc' : 'Period result',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w700,
