@@ -161,6 +161,12 @@ class TradeDetailScreen extends StatelessWidget {
     final gradeColor = _gradeColor(currentTrade.grade);
     final resultColor = currentTrade.resultR >= 0 ? Colors.green : Colors.red;
 
+    final hasPositionSizing =
+        currentTrade.plannedVolume != null ||
+            currentTrade.plannedRiskMoney != null ||
+            currentTrade.actualRiskMoney != null ||
+            (currentTrade.riskCalculatorProfile ?? '').trim().isNotEmpty;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(s.tradeDetail),
@@ -210,10 +216,49 @@ class TradeDetailScreen extends StatelessWidget {
             ),
           ),
 
+          if (hasPositionSizing) ...[
+            const SizedBox(height: 14),
+            _SectionCard(
+              title: s.isVi ? 'Position sizing' : 'Position sizing',
+              icon: Icons.calculate_rounded,
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _DetailStat(
+                    label: s.isVi ? 'Volume' : 'Volume',
+                    value: _formatDetailNumber(currentTrade.plannedVolume),
+                  ),
+                  _DetailStat(
+                    label: s.isVi ? 'Risk dự kiến' : 'Planned risk',
+                    value: _moneyText(
+                      currentTrade.plannedRiskMoney,
+                      currentTrade.riskCalculatorAccountCurrency,
+                    ),
+                  ),
+                  _DetailStat(
+                    label: s.isVi ? 'Risk thực tế' : 'Actual risk',
+                    value: _moneyText(
+                      currentTrade.actualRiskMoney,
+                      currentTrade.riskCalculatorAccountCurrency,
+                    ),
+                  ),
+                  _DetailStat(
+                    label: s.isVi ? 'Profile' : 'Profile',
+                    value: (currentTrade.riskCalculatorProfile ?? '').trim().isEmpty
+                        ? '—'
+                        : currentTrade.riskCalculatorProfile!,
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 14),
 
           _SectionCard(
             title: s.decisionChecklist,
+
             icon: Icons.fact_check_rounded,
             child: Column(
               children: [
@@ -361,6 +406,30 @@ class TradeDetailScreen extends StatelessWidget {
 String _feeText(double fee) {
   if (fee.abs() < 0.005) return '0.00';
   return fee.toStringAsFixed(2);
+}
+
+String _formatDetailNumber(double? value) {
+  if (value == null) return '—';
+
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
+  }
+
+  return value
+      .toStringAsFixed(4)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
+}
+
+String _moneyText(double? value, String? currency) {
+  if (value == null) return '—';
+
+  final c = (currency ?? 'USD').trim().toUpperCase();
+  final n = _formatDetailNumber(value);
+
+  if (c == 'USD') return '\$$n';
+
+  return '$c $n';
 }
 
 String _dateText(DateTime dt) {

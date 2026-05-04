@@ -132,6 +132,14 @@ class Trade {
   final double riskUsed;
 
   final double fee;
+
+  /// Optional position sizing data from 1R Calculator.
+  final double? plannedVolume;
+  final double? plannedRiskMoney;
+  final double? actualRiskMoney;
+  final String? riskCalculatorProfile;
+  final String? riskCalculatorAccountCurrency;
+
   final TradeChecklist checklist;
   final String? beforeImagePath;
   final String? afterImagePath;
@@ -148,6 +156,11 @@ class Trade {
     required this.exit,
     this.riskUsed = 1.0,
     this.fee = 0.0,
+    this.plannedVolume,
+    this.plannedRiskMoney,
+    this.actualRiskMoney,
+    this.riskCalculatorProfile,
+    this.riskCalculatorAccountCurrency,
     required this.checklist,
     this.beforeImagePath,
     this.afterImagePath,
@@ -185,6 +198,11 @@ class Trade {
       exit: exit,
       riskUsed: riskUsed,
       fee: fee,
+      plannedVolume: plannedVolume,
+      plannedRiskMoney: plannedRiskMoney,
+      actualRiskMoney: actualRiskMoney,
+      riskCalculatorProfile: riskCalculatorProfile,
+      riskCalculatorAccountCurrency: riskCalculatorAccountCurrency,
       checklist: checklist,
       beforeImagePath: beforeImagePath,
       afterImagePath: path,
@@ -204,6 +222,11 @@ class Trade {
       exit: exit,
       riskUsed: riskUsed,
       fee: fee,
+      plannedVolume: plannedVolume,
+      plannedRiskMoney: plannedRiskMoney,
+      actualRiskMoney: actualRiskMoney,
+      riskCalculatorProfile: riskCalculatorProfile,
+      riskCalculatorAccountCurrency: riskCalculatorAccountCurrency,
       checklist: checklist,
       beforeImagePath: path,
       afterImagePath: afterImagePath,
@@ -222,6 +245,11 @@ class Trade {
     'exit': exit,
     'riskUsed': riskUsed,
     'fee': fee,
+    'plannedVolume': plannedVolume,
+    'plannedRiskMoney': plannedRiskMoney,
+    'actualRiskMoney': actualRiskMoney,
+    'riskCalculatorProfile': riskCalculatorProfile,
+    'riskCalculatorAccountCurrency': riskCalculatorAccountCurrency,
     'checklist': checklist.toJson(),
     'beforeImagePath': beforeImagePath,
     'afterImagePath': afterImagePath,
@@ -240,6 +268,12 @@ class Trade {
       exit: (json['exit'] as num).toDouble(),
       riskUsed: (json['riskUsed'] as num?)?.toDouble() ?? 1.0,
       fee: (json['fee'] as num?)?.toDouble() ?? 0.0,
+      plannedVolume: (json['plannedVolume'] as num?)?.toDouble(),
+      plannedRiskMoney: (json['plannedRiskMoney'] as num?)?.toDouble(),
+      actualRiskMoney: (json['actualRiskMoney'] as num?)?.toDouble(),
+      riskCalculatorProfile: json['riskCalculatorProfile']?.toString(),
+      riskCalculatorAccountCurrency:
+      json['riskCalculatorAccountCurrency']?.toString(),
       checklist: TradeChecklist.fromJson(
         Map<String, dynamic>.from(json['checklist']),
       ),

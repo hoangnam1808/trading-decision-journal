@@ -61,6 +61,12 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
   String? _beforeImagePath;
   String? _afterImagePath;
 
+  double? _plannedVolume;
+  double? _plannedRiskMoney;
+  double? _actualRiskMoney;
+  String? _riskCalculatorProfile;
+  String? _riskCalculatorAccountCurrency;
+
   TradeChecklist c = const TradeChecklist(
     contextOk: true,
     entryZoneOk: true,
@@ -91,6 +97,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
 
       _beforeImagePath = t.beforeImagePath;
       _afterImagePath = t.afterImagePath;
+
+      _plannedVolume = t.plannedVolume;
+      _plannedRiskMoney = t.plannedRiskMoney;
+      _actualRiskMoney = t.actualRiskMoney;
+      _riskCalculatorProfile = t.riskCalculatorProfile;
+      _riskCalculatorAccountCurrency = t.riskCalculatorAccountCurrency;
+
       c = t.checklist;
     } else {
       _dateTime = DateTime.now();
@@ -305,6 +318,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'\.$'), '');
   }
+  void _clearPositionSizingSnapshot() {
+    _plannedVolume = null;
+    _plannedRiskMoney = null;
+    _actualRiskMoney = null;
+    _riskCalculatorProfile = null;
+    _riskCalculatorAccountCurrency = null;
+  }
   Future<void> _openRiskCalculator() async {
     final result = await Navigator.of(context).push<RiskCalculatorFillResult>(
       MaterialPageRoute(
@@ -332,6 +352,12 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       if (riskUsed > 0) {
         _riskUsedCtrl.text = _formatRiskUsed(riskUsed);
       }
+
+      _plannedVolume = result.suggestedVolume;
+      _plannedRiskMoney = result.riskMoney;
+      _actualRiskMoney = result.actualRisk;
+      _riskCalculatorProfile = result.profileName;
+      _riskCalculatorAccountCurrency = result.accountCurrency;
     });
 
     final s = S.read(context);
@@ -532,6 +558,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
       exit: double.parse(_exitCtrl.text.trim()),
       riskUsed: _parseRiskUsed(),
       fee: _parseOptionalFee(),
+      plannedVolume: _plannedVolume,
+      plannedRiskMoney: _plannedRiskMoney,
+      actualRiskMoney: _actualRiskMoney,
+      riskCalculatorProfile: _riskCalculatorProfile,
+      riskCalculatorAccountCurrency: _riskCalculatorAccountCurrency,
       checklist: c,
       beforeImagePath: _beforeImagePath,
       afterImagePath: _afterImagePath,
@@ -575,6 +606,13 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
         _noteCtrl.clear();
         _beforeImagePath = null;
         _afterImagePath = null;
+
+        _plannedVolume = null;
+        _plannedRiskMoney = null;
+        _actualRiskMoney = null;
+        _riskCalculatorProfile = null;
+        _riskCalculatorAccountCurrency = null;
+
         c = const TradeChecklist(
           contextOk: true,
           entryZoneOk: true,
@@ -822,6 +860,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                       labelText: s.pairSymbol,
                       hintText: s.pairHint,
                     ),
+                    onChanged: (_) {
+                      setState(() {
+                        _clearPositionSizingSnapshot();
+                      });
+                    },
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return s.requiredField;
                       return null;
@@ -864,7 +907,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     decoration: InputDecoration(
                       labelText: s.entry,
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {
+                      setState(() {
+                        _clearPositionSizingSnapshot();
+                      });
+                    },
                     validator: (v) {
                       if (_parse(v ?? '') == null) return s.numberField;
                       return null;
@@ -878,7 +925,11 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     decoration: InputDecoration(
                       labelText: s.stopLoss,
                     ),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {
+                      setState(() {
+                        _clearPositionSizingSnapshot();
+                      });
+                    },
                     validator: (v) {
                       if (_parse(v ?? '') == null) return s.numberField;
                       return null;
@@ -998,6 +1049,16 @@ class _AddTradeFlowState extends State<AddTradeFlow> {
                     ),
                   ),
                   const SizedBox(height: 14),
+                  if (_plannedVolume != null || _actualRiskMoney != null) ...[
+                    _PositionSizingPreviewCard(
+                      volume: _plannedVolume,
+                      plannedRiskMoney: _plannedRiskMoney,
+                      actualRiskMoney: _actualRiskMoney,
+                      profile: _riskCalculatorProfile,
+                      currency: _riskCalculatorAccountCurrency,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _PreviewRCard(
                     label: s.autoR,
                     value: previewR,
@@ -1374,6 +1435,109 @@ class _DateTimeButton extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
         ),
+      ),
+    );
+  }
+}
+
+class _PositionSizingPreviewCard extends StatelessWidget {
+  final double? volume;
+  final double? plannedRiskMoney;
+  final double? actualRiskMoney;
+  final String? profile;
+  final String? currency;
+
+  const _PositionSizingPreviewCard({
+    required this.volume,
+    required this.plannedRiskMoney,
+    required this.actualRiskMoney,
+    required this.profile,
+    required this.currency,
+  });
+
+  String _formatNumber(double? value) {
+    if (value == null) return '—';
+
+    if (value == value.roundToDouble()) {
+      return value.toStringAsFixed(0);
+    }
+
+    return value
+        .toStringAsFixed(4)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  String _formatMoney(double? value) {
+    final c = currency ?? 'USD';
+    final n = _formatNumber(value);
+
+    if (c == 'USD') return '\$$n';
+
+    return '$c $n';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final s = S.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: theme.colorScheme.primary.withOpacity(
+          theme.brightness == Brightness.dark ? 0.12 : 0.08,
+        ),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.20),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.calculate_rounded,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  s.isVi ? 'Position sizing từ 1R Calculator' : 'Position sizing from 1R Calculator',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  s.isVi
+                      ? 'Volume: ${_formatNumber(volume)} · Risk thực tế: ${_formatMoney(actualRiskMoney)}'
+                      : 'Volume: ${_formatNumber(volume)} · Actual risk: ${_formatMoney(actualRiskMoney)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  s.isVi
+                      ? 'Risk dự kiến: ${_formatMoney(plannedRiskMoney)} · Profile: ${profile ?? '—'}'
+                      : 'Planned risk: ${_formatMoney(plannedRiskMoney)} · Profile: ${profile ?? '—'}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
