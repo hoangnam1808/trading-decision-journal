@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-
+import '../l10n/strings.dart';
 import '../state/app_settings.dart';
 
 enum RiskInputMode {
@@ -745,7 +745,9 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     final units = (value / step).floor();
     return double.parse((units * step).toStringAsFixed(8));
   }
-
+  String _tr(BuildContext context, String en, String vi) {
+    return S.of(context).isVi ? vi : en;
+  }
   String _formatMoney(double value, [String? currency]) {
     final c = currency ?? _selectedProfile.accountCurrency;
 
@@ -848,15 +850,19 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                 children: [
                   Text(
                     isAddingSymbol
-                        ? 'Add symbol specs'
-                        : 'Add broker / platform profile',
+                        ? _tr(context, 'Add symbol specs', 'Thêm thông số symbol')
+                        : _tr(context, 'Add broker / platform profile', 'Thêm broker / nền tảng'),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'You can find these values in MT5 → Symbol Specification or your broker contract details.',
+                    _tr(
+                      context,
+                      'You can find these values in MT5 → Symbol Specification or your broker contract details.',
+                      'Bạn có thể xem các thông số này trong MT5 → Specification hoặc phần contract details của broker.',
+                    ),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                       height: 1.35,
@@ -867,17 +873,17 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                   if (!isAddingSymbol) ...[
                     TextField(
                       controller: profileNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Profile name',
-                        hintText: 'My MT5 / My Broker / FTMO',
+                      decoration: InputDecoration(
+                        labelText: _tr(context, 'Profile name', 'Tên profile'),
+                        hintText: _tr(context, 'My MT5 / My Broker / FTMO', 'MT5 của tôi / Broker của tôi / FTMO'),
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: accountCurrency,
-                      decoration: const InputDecoration(
-                        labelText: 'Account currency',
+                      decoration: InputDecoration(
+                        labelText: _tr(context, 'Account currency', 'Tiền tệ tài khoản'),
                         border: OutlineInputBorder(),
                       ),
                       items: _currencies
@@ -898,8 +904,8 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
 
                   TextField(
                     controller: symbolCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Symbol name',
+                    decoration: InputDecoration(
+                      labelText: _tr(context, 'Symbol name', 'Tên symbol'),
                       hintText: 'EURNZD / UK100.cash / BTCUSD',
                       border: OutlineInputBorder(),
                     ),
@@ -907,8 +913,8 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: assetClassCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Asset class',
+                    decoration: InputDecoration(
+                      labelText: _tr(context, 'Asset class', 'Nhóm tài sản'),
                       hintText: 'Forex / Index CFD / Crypto',
                       border: OutlineInputBorder(),
                     ),
@@ -916,7 +922,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: profitCurrency,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Profit currency',
                       border: OutlineInputBorder(),
                     ),
@@ -940,7 +946,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                         child: TextField(
                           controller: tickSizeCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Tick size',
                             border: OutlineInputBorder(),
                           ),
@@ -951,7 +957,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                         child: TextField(
                           controller: tickValueCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Tick value / lot',
                             border: OutlineInputBorder(),
                           ),
@@ -966,7 +972,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                         child: TextField(
                           controller: volumeStepCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Volume step',
                             border: OutlineInputBorder(),
                           ),
@@ -977,7 +983,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                         child: TextField(
                           controller: minVolumeCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Min volume',
                             border: OutlineInputBorder(),
                           ),
@@ -1090,7 +1096,9 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                     },
                     icon: const Icon(Icons.save_rounded),
                     label: Text(
-                      isAddingSymbol ? 'Save symbol' : 'Save custom profile',
+                      isAddingSymbol
+                          ? _tr(context, 'Save symbol', 'Lưu symbol')
+                          : _tr(context, 'Save custom profile', 'Lưu profile'),
                     ),
                   ),
                 ],
@@ -1109,13 +1117,19 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('1R Calculator'),
+        title: Text(_tr(context, '1R Calculator', 'Máy tính 1R')),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+        body: SafeArea(
+          top: false,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+            children: [
           Text(
-            'Calculate position size using account size, planned risk, entry, and stop loss.',
+            _tr(
+              context,
+              'Calculate position size using account size, planned risk, entry, and stop loss.',
+              'Tính khối lượng vào lệnh từ tài khoản, mức rủi ro, entry và stop loss.',
+            ),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -1123,17 +1137,17 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
           const SizedBox(height: 16),
 
           _sectionCard(
-            title: 'Risk',
+            title: _tr(context, 'Risk', 'Rủi ro'),
             children: [
               SegmentedButton<RiskInputMode>(
-                segments: const [
+                segments: [
                   ButtonSegment(
                     value: RiskInputMode.percent,
-                    label: Text('% Balance'),
+                    label: Text(_tr(context, '% Balance', '% tài khoản')),
                   ),
                   ButtonSegment(
                     value: RiskInputMode.fixedMoney,
-                    label: Text('Fixed'),
+                    label: Text(_tr(context, 'Fixed', 'Cố định')),
                   ),
                 ],
                 selected: {_riskMode},
@@ -1145,7 +1159,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               if (_riskMode == RiskInputMode.percent) ...[
                 _numberField(
                   controller: _accountController,
-                  label: 'Account balance',
+                  label: _tr(context, 'Account balance', 'Số dư tài khoản'),
                   prefixText: _selectedProfile.accountCurrency == 'USD'
                       ? '\$ '
                       : '${_selectedProfile.accountCurrency} ',
@@ -1153,13 +1167,13 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                 const SizedBox(height: 12),
                 _numberField(
                   controller: _riskPercentController,
-                  label: 'Risk',
+                  label: _tr(context, 'Risk', 'Rủi ro'),
                   suffixText: ' %',
                 ),
               ] else
                 _numberField(
                   controller: _fixedRiskController,
-                  label: 'Fixed risk money',
+                  label: _tr(context, 'Fixed risk money', 'Số tiền risk cố định'),
                   prefixText: _selectedProfile.accountCurrency == 'USD'
                       ? '\$ '
                       : '${_selectedProfile.accountCurrency} ',
@@ -1170,12 +1184,12 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
           const SizedBox(height: 12),
 
           _sectionCard(
-            title: 'Trade',
+            title: _tr(context, 'Trade', 'Lệnh giao dịch'),
             children: [
               DropdownButtonFormField<BrokerProfile>(
                 value: _selectedProfile,
-                decoration: const InputDecoration(
-                  labelText: 'Broker / platform profile',
+                decoration: InputDecoration(
+                  labelText: _tr(context, 'Broker / platform profile', 'Broker / nền tảng'),
                   border: OutlineInputBorder(),
                 ),
                 items: _profiles
@@ -1198,8 +1212,16 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               const SizedBox(height: 8),
               Text(
                 _selectedProfile.isDefault
-                    ? 'Using app default specs. You can create your own broker profile below.'
-                    : 'Using saved custom specs for ${_selectedProfile.name}.',
+                    ? _tr(
+                  context,
+                  'Using app default specs. You can create your own broker profile below.',
+                  'Đang dùng thông số mặc định của app. Bạn có thể thêm broker/nền tảng riêng bên dưới.',
+                )
+                    : _tr(
+                  context,
+                  'Using saved custom specs for ${_selectedProfile.name}.',
+                  'Đang dùng thông số đã lưu cho ${_selectedProfile.name}.',
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
@@ -1208,8 +1230,8 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<SymbolSpec>(
                 value: _selectedSpec,
-                decoration: const InputDecoration(
-                  labelText: 'Symbol',
+                decoration: InputDecoration(
+                  labelText: _tr(context, 'Symbol', 'Mã giao dịch'),
                   border: OutlineInputBorder(),
                 ),
                 items: _selectedProfile.symbols
@@ -1234,14 +1256,14 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                   Expanded(
                     child: _numberField(
                       controller: _entryController,
-                      label: 'Entry',
+                      label: _tr(context, 'Entry', 'Entry'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _numberField(
                       controller: _stopController,
-                      label: 'Stop loss',
+                      label: _tr(context, 'Stop loss', 'Stop loss'),
                     ),
                   ),
                 ],
@@ -1249,13 +1271,13 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               const SizedBox(height: 12),
               _numberField(
                 controller: _targetController,
-                label: 'Target optional',
+                label: _tr(context, 'Target optional', 'Target / Exit tùy chọn'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => _showCustomProfileSheet(),
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Add broker / platform specs'),
+                label: Text(_tr(context, 'Add broker / platform specs', 'Thêm thông số broker/nền tảng')),
               ),
               if (!_selectedProfile.isDefault) ...[
                 const SizedBox(height: 8),
@@ -1264,7 +1286,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                     addSymbolToProfile: _selectedProfile,
                   ),
                   icon: const Icon(Icons.playlist_add_rounded),
-                  label: const Text('Add symbol to this profile'),
+                  label: Text(_tr(context, 'Add symbol to this profile', 'Thêm symbol vào profile này')),
                 ),
               ],
             ],
@@ -1281,34 +1303,45 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
 
           _advancedCard(),
 
-          const SizedBox(height: 20),
 
-          if (widget.returnResultOnUse)
-            FilledButton.icon(
-              onPressed: result.hasError || result.suggestedVolume <= 0
-                  ? null
-                  : () {
-                final target = _num(_targetController);
-
-                Navigator.of(context).pop(
-                  RiskCalculatorFillResult(
-                    profileName: _selectedProfile.name,
-                    accountCurrency: _selectedProfile.accountCurrency,
-                    symbol: _selectedSpec.symbol,
-                    entry: _num(_entryController),
-                    stopLoss: _num(_stopController),
-                    target: target > 0 ? target : null,
-                    riskMoney: result.riskMoney,
-                    actualRisk: result.actualRisk,
-                    suggestedVolume: result.suggestedVolume,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward),
-              label: const Text('Use in New Trade'),
-            ),
         ],
+          ),
       ),
+      bottomNavigationBar: widget.returnResultOnUse
+          ? SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: FilledButton.icon(
+          onPressed: result.hasError || result.suggestedVolume <= 0
+              ? null
+              : () {
+            final target = _num(_targetController);
+
+            Navigator.of(context).pop(
+              RiskCalculatorFillResult(
+                profileName: _selectedProfile.name,
+                accountCurrency: _selectedProfile.accountCurrency,
+                symbol: _selectedSpec.symbol,
+                entry: _num(_entryController),
+                stopLoss: _num(_stopController),
+                target: target > 0 ? target : null,
+                riskMoney: result.riskMoney,
+                actualRisk: result.actualRisk,
+                suggestedVolume: result.suggestedVolume,
+              ),
+            );
+          },
+          icon: const Icon(Icons.arrow_forward),
+          label: Text(_tr(context, 'Use in New Trade', 'Dùng cho lệnh mới')),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+        ),
+      )
+          : null,
     );
   }
 
@@ -1374,19 +1407,24 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
       ),
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        title: const Text('Advanced broker specs'),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        title: Text(_tr(context, 'Advanced broker specs', 'Cài đặt broker nâng cao')),
         subtitle: Text(
-          'Rates and symbol specs are handled automatically. Edit only if needed.',
+          _tr(
+            context,
+            'Rates and symbol specs are handled automatically. Edit only if needed.',
+            'App tự xử lý tỷ giá và thông số symbol. Chỉ mở phần này khi bạn muốn tự chỉnh.',
+          ),
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         children: [
+          const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: _profitCurrency,
-            decoration: const InputDecoration(
-              labelText: 'Profit currency',
+            decoration: InputDecoration(
+              labelText: _tr(context, 'Profit currency', 'Tiền tệ lợi nhuận'),
               border: OutlineInputBorder(),
             ),
             items: _currencies
@@ -1408,14 +1446,14 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               Expanded(
                 child: _numberField(
                   controller: _tickSizeController,
-                  label: 'Tick size',
+                  label: _tr(context, 'Tick size', 'Tick size'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _numberField(
                   controller: _tickValueController,
-                  label: 'Tick value / lot',
+                  label: _tr(context, 'Tick value / lot', 'Giá trị tick / lot'),
                 ),
               ),
             ],
@@ -1426,14 +1464,14 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
               Expanded(
                 child: _numberField(
                   controller: _volumeStepController,
-                  label: 'Volume step',
+                  label: _tr(context, 'Volume step', 'Bước volume'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _numberField(
                   controller: _minVolumeController,
-                  label: 'Min volume',
+                  label: _tr(context, 'Min volume', 'Volume tối thiểu'),
                 ),
               ),
             ],
@@ -1460,7 +1498,7 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Exchange rates'),
+                      Text(_tr(context, 'Exchange rates', 'Tỷ giá')),
                       const SizedBox(height: 3),
                       Text(
                         _rateStatusText(),
@@ -1571,24 +1609,28 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Result', style: theme.textTheme.titleMedium),
+            Text(_tr(context, 'Result', 'Kết quả'), style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
             _bigResultRow(
-              label: 'Suggested volume',
+              label: _tr(context, 'Suggested volume', 'Volume gợi ý'),
               value: _formatVolume(result.suggestedVolume),
             ),
             const Divider(height: 28),
-            _resultRow('1R money', _formatMoney(result.riskMoney)),
-            _resultRow('SL distance', _formatNumber(result.slDistance)),
-            _resultRow('Actual risk', _formatMoney(result.actualRisk)),
+            _resultRow(_tr(context, '1R money', 'Tiền risk / 1R'), _formatMoney(result.riskMoney)),
+            _resultRow(_tr(context, 'SL distance', 'Khoảng cách SL'), _formatNumber(result.slDistance)),
+            _resultRow(_tr(context, 'Actual risk', 'Risk thực tế'), _formatMoney(result.actualRisk)),
             if (result.rr != null)
-              _resultRow('Planned R:R', '1:${result.rr!.toStringAsFixed(2)}'),
+              _resultRow(_tr(context, 'Planned R:R', 'R:R dự kiến'), '1:${result.rr!.toStringAsFixed(2)}'),
             if (result.potentialProfit != null)
-              _resultRow('Potential profit', _formatMoney(result.potentialProfit!)),
+              _resultRow(_tr(context, 'Potential profit', 'Lợi nhuận dự kiến'), _formatMoney(result.potentialProfit!)),
             if (result.suggestedVolume <= 0) ...[
               const SizedBox(height: 12),
               Text(
-                'The calculated volume is below minimum volume. Try reducing risk distance, increasing risk money, or checking broker specs.',
+                _tr(
+                  context,
+                  'The calculated volume is below minimum volume. Try reducing risk distance, increasing risk money, or checking broker specs.',
+                  'Volume tính được thấp hơn volume tối thiểu. Hãy kiểm tra khoảng SL, mức risk hoặc thông số broker.',
+                ),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
