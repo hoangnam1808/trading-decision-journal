@@ -220,7 +220,7 @@ class ExchangeRateService {
       rateDate: 'built_in_estimate',
       usdBaseRates: const {
         'EUR': 0.92,
-        'GBP': 0.79,
+        'GBP': 0.735,
         'JPY': 155.0,
         'CHF': 0.90,
         'CAD': 1.37,
@@ -251,10 +251,10 @@ class ExchangeRateService {
   Future<ExchangeRateSnapshot> fetchLatestUsdBaseRates() async {
     final uri = Uri.https(
       'api.frankfurter.dev',
-      '/v2/rates',
+      '/v1/latest',
       {
         'base': 'USD',
-        'quotes': _supportedCurrencies.join(','),
+        'symbols': _supportedCurrencies.join(','),
       },
     );
 
