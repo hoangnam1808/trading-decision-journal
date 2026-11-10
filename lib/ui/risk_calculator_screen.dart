@@ -60,6 +60,14 @@ class SymbolSpec {
   }
 }
 
+List<SymbolSpec> filterSymbolSpecs(List<SymbolSpec> symbols, String query) {
+  final search = query.trim().toLowerCase();
+  if (search.isEmpty) return symbols;
+  return symbols
+      .where((spec) => spec.symbol.toLowerCase().contains(search))
+      .toList();
+}
+
 class BrokerProfile {
   final String id;
   final String name;
@@ -628,6 +636,24 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
     _tickValueController.text = _formatNumber(spec.tickValuePerLot);
     _volumeStepController.text = _formatNumber(spec.volumeStep);
     _minVolumeController.text = _formatNumber(spec.minVolume);
+  }
+
+  Future<void> _showSymbolSearch() async {
+    final spec = await showModalBottomSheet<SymbolSpec>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => _SymbolSearchSheet(
+        symbols: _selectedProfile.symbols,
+        selectedSpec: _selectedSpec,
+      ),
+    );
+    if (!mounted || spec == null || identical(spec, _selectedSpec)) return;
+    setState(() {
+      _selectedSpec = spec;
+      _applySpec(spec);
+    });
   }
 
   double _num(TextEditingController controller) {
@@ -1353,27 +1379,21 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<SymbolSpec>(
-                value: _selectedSpec,
-                decoration: InputDecoration(
-                  labelText: _tr(context, 'Symbol', 'Mã giao dịch'),
-                  border: OutlineInputBorder(),
-                ),
-                items: _selectedProfile.symbols
-                    .map(
-                      (spec) => DropdownMenuItem(
-                    value: spec,
-                    child: Text(spec.symbol),
+              InkWell(
+                key: const Key('symbolSelector'),
+                onTap: _showSymbolSearch,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: _tr(context, 'Symbol', 'Mã giao dịch'),
+                    border: const OutlineInputBorder(),
                   ),
-                )
-                    .toList(),
-                onChanged: (spec) {
-                  if (spec == null) return;
-                  setState(() {
-                    _selectedSpec = spec;
-                    _applySpec(spec);
-                  });
-                },
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(_selectedSpec.symbol)),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -1823,6 +1843,114 @@ class _RiskCalculatorScreenState extends State<RiskCalculatorScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SymbolSearchSheet extends StatefulWidget {
+  final List<SymbolSpec> symbols;
+  final SymbolSpec selectedSpec;
+
+  const _SymbolSearchSheet({
+    required this.symbols,
+    required this.selectedSpec,
+  });
+
+  @override
+  State<_SymbolSearchSheet> createState() => _SymbolSearchSheetState();
+}
+
+class _SymbolSearchSheetState extends State<_SymbolSearchSheet> {
+  final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isVi = S.of(context).isVi;
+    final query = _searchController.text;
+    final matches = filterSymbolSpecs(widget.symbols, query);
+    final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
+    final availableHeight = MediaQuery.sizeOf(context).height - keyboardHeight;
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardHeight),
+      child: SizedBox(
+        height: availableHeight * 0.72,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: TextField(
+                key: const Key('symbolSearchField'),
+                controller: _searchController,
+                autofocus: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                decoration: InputDecoration(
+                  labelText: isVi ? 'Tìm mã giao dịch' : 'Search symbols',
+                  hintText: isVi ? 'Ví dụ: EUR, XAU, BTC' : 'e.g. EUR, XAU, BTC',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: isVi ? 'Xóa tìm kiếm' : 'Clear search',
+                          onPressed: _searchController.clear,
+                          icon: const Icon(Icons.clear),
+                        ),
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Expanded(
+              child: matches.isEmpty
+                  ? Center(
+                      child: Text(
+                        isVi
+                            ? 'Không tìm thấy mã giao dịch phù hợp.'
+                            : 'No matching symbols found.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      itemCount: matches.length,
+                      itemBuilder: (context, index) {
+                        final spec = matches[index];
+                        return ListTile(
+                          title: Text(spec.symbol),
+                          trailing: spec == widget.selectedSpec
+                              ? const Icon(Icons.check_rounded)
+                              : null,
+                          onTap: () => Navigator.of(context).pop(spec),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
